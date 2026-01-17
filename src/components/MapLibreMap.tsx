@@ -171,15 +171,54 @@ export function MapLibreMap({ center, overlay, selectedBodyId, allEvents = [], o
 
                 if (title && coordinates) {
                     if (popup.current) popup.current.remove();
-                    popup.current = new maplibregl.Popup({
+                    const popupInstance = new maplibregl.Popup({
                         closeButton: false,
                         closeOnClick: false,
                         offset: 10,
-                        className: 'event-popup' // We can style this globally if needed
+                        className: 'event-popup'
                     })
                         .setLngLat(coordinates)
-                        .setHTML(`<div class="text-slate-900 font-semibold text-sm px-1">${title}</div>`)
+                        .setHTML(`
+                            <div class="text-slate-900 px-1">
+                                <div class="font-bold text-sm mb-1">${title}</div>
+                                <div class="text-[10px] text-slate-500 font-mono animate-pulse">Scanning location...</div>
+                            </div>
+                        `)
                         .addTo(map.current);
+
+                    popup.current = popupInstance;
+
+                    // Reverse Geocode
+                    const [lng, lat] = coordinates;
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+                        headers: { 'User-Agent': 'AstroNatalChart/1.0' }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            // Check if popup is still open and for the same location (simple check)
+                            if (popup.current === popupInstance) {
+                                const address = data.display_name ?
+                                    data.display_name.split(',').slice(0, 3).join(',') : // Shorten address
+                                    'Address not found';
+
+                                popupInstance.setHTML(`
+                                    <div class="text-slate-900 px-1">
+                                        <div class="font-bold text-sm mb-1">${title}</div>
+                                        <div class="text-[10px] text-slate-600 leading-tight">${address}</div>
+                                    </div>
+                                `);
+                            }
+                        })
+                        .catch(err => {
+                            if (popup.current === popupInstance) {
+                                popupInstance.setHTML(`
+                                    <div class="text-slate-900 px-1">
+                                        <div class="font-bold text-sm mb-1">${title}</div>
+                                        <div class="text-[10px] text-red-500">Address lookup failed</div>
+                                    </div>
+                                `);
+                            }
+                        });
                 }
             });
 

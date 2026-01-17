@@ -36,7 +36,7 @@ export async function fetchNYCEvents(
         const events: EventItem[] = data.map((record: any) => ({
             id: `nyc-${record.arrest_key}`,
             title: `${record.pd_desc || 'Arrest'} (${record.ofns_desc || 'Unknown'})`,
-            datetimeISO: `${record.arrest_date}T12:00:00Z`, // NYPD gives date only
+            datetimeISO: `${record.arrest_date.split('T')[0]}T12:00:00Z`, // Fix: remove existing time part if any
             timeType: 'reported',
             timeConfidence: 'exact', // Date is exact
             location: {
