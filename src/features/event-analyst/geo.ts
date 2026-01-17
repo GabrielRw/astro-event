@@ -166,13 +166,18 @@ export function generateRayLine(
     centerLat: number,
     centerLng: number,
     bearingDeg: number,
-    distanceMeters: number
+    distanceMeters: number,
+    numPoints: number = 64
 ): [number, number][] {
-    const endPoint = destinationPoint(centerLat, centerLng, bearingDeg, distanceMeters);
-    return [
-        [centerLng, centerLat],
-        [endPoint.lng, endPoint.lat],
-    ];
+    const coordinates: [number, number][] = [];
+
+    for (let i = 0; i <= numPoints; i++) {
+        const dist = (distanceMeters / numPoints) * i;
+        const point = destinationPoint(centerLat, centerLng, bearingDeg, dist);
+        coordinates.push([point.lng, point.lat]);
+    }
+
+    return coordinates;
 }
 
 /**
