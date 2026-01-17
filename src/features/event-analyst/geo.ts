@@ -190,14 +190,6 @@ export function computeDegreeDerivedRings(
     }
 
     const multipliers = [0.01, 0.1, 1, 10, 100];
-    const rings = multipliers
-        .map(m => m * referenceDegree)
-        .filter(r => r <= maxDistanceMiles && r > 0);
-
-    // Always include max distance as final ring if not already
-    if (rings.length === 0 || rings[rings.length - 1] < maxDistanceMiles) {
-        rings.push(maxDistanceMiles);
-    }
-
-    return rings;
+    // Return all rings regardless of maxDistanceMiles, as the line must touch the largest one
+    return multipliers.map(m => m * referenceDegree);
 }

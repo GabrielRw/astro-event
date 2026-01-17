@@ -21,6 +21,11 @@ export function buildRayFeatures(
 
     return bodies
         .filter(body => {
+            // Usage: If a specific body is selected, show ONLY that body
+            if (settings.selectedBodyId) {
+                return body.id === settings.selectedBodyId;
+            }
+
             if (body.group === 'planet' && !settings.enabledGroups.planets) return false;
             if (body.group === 'angle' && !settings.enabledGroups.angles) return false;
             if (body.group === 'house' && !settings.enabledGroups.houses) return false;
@@ -108,7 +113,13 @@ export function buildOverlayGeoJSON(
     bodies: ChartBody[],
     settings: OverlaySettings
 ): OverlayGeoJSON {
-    const rays = buildRayFeatures(centerLat, centerLng, bodies, settings.maxDistanceMiles, settings);
+    // Determine ray distance: in degreeDerived mode, rays must touch the ends of the circumference (the largest ring)
+    let rayDistance = settings.maxDistanceMiles;
+    if (settings.ringMode === 'degreeDerived' && settings.ringValuesMiles.length > 0) {
+        rayDistance = Math.max(...settings.ringValuesMiles);
+    }
+
+    const rays = buildRayFeatures(centerLat, centerLng, bodies, rayDistance, settings);
     const rings = buildRingFeatures(centerLat, centerLng, settings.ringValuesMiles);
 
     return {

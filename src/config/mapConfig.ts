@@ -4,9 +4,8 @@
  */
 
 export const mapConfig = {
-    // OpenFreeMap style URL - liberty style (clean, readable)
-    // Other options: https://openfreemap.org/
-    defaultStyleUrl: 'https://tiles.openfreemap.org/styles/liberty',
+    // Carto Dark Matter style for premium dark mode feel
+    defaultStyleUrl: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
 
     // Attribution required by OpenFreeMap / OpenStreetMap
     attribution: '© <a href="https://openfreemap.org">OpenFreeMap</a> © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
@@ -40,6 +39,18 @@ export const mapConfig = {
             color: '#ef4444', // red-500
             size: 12,
         },
+        eventMarkers: {
+            color: '#22c55e', // green-500
+            strokeColor: '#ffffff',
+            strokeWidth: 2,
+            radius: 6,
+        },
+        eventMarkersGlow: {
+            color: '#22c55e',
+            radius: 12,
+            blur: 1,
+            opacity: 0.4,
+        }
     },
 
     // Body group colors

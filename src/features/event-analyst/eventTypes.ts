@@ -31,6 +31,7 @@ export interface EventItem {
     timeType: EventTimeType;
     timeConfidence: Confidence;
     location: EventLocation;
+    dataSource?: 'historical' | 'uk-police' | 'us-city' | 'user';
     notes?: string;
 }
 

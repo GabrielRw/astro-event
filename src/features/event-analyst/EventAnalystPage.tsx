@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { MapLibreMap } from '@/src/components/MapLibreMap';
-import { EventList } from './EventList';
 import { ChartPanel } from './ChartPanel';
+import { EventList } from './EventList';
 import { EventModal } from './EventModal';
 import { sampleEvents } from './sampleEvents';
 import { buildOverlayGeoJSON, computeRingValues } from './overlayBuilder';
@@ -120,10 +120,18 @@ export function EventAnalystPage() {
         calculateChart();
     }, [selectedEvent]);
 
-    // Update ring values when mode or distance changes
+    // Update ring values when mode, distance, or selected body changes
     useEffect(() => {
-        const icBody = chartBodies.find(b => b.id === 'ic' || b.id === 'house_4');
-        const referenceDeg = icBody?.deg;
+        let referenceDeg: number | undefined;
+
+        if (overlaySettings.selectedBodyId) {
+            const selectedBody = chartBodies.find(b => b.id === overlaySettings.selectedBodyId);
+            referenceDeg = selectedBody?.deg;
+        } else {
+            // Default to IC if nothing selected
+            const icBody = chartBodies.find(b => b.id === 'ic' || b.id === 'house_4');
+            referenceDeg = icBody?.deg;
+        }
 
         const ringValues = computeRingValues(
             overlaySettings.ringMode,
@@ -135,7 +143,7 @@ export function EventAnalystPage() {
             ...prev,
             ringValuesMiles: ringValues,
         }));
-    }, [overlaySettings.ringMode, overlaySettings.maxDistanceMiles, chartBodies]);
+    }, [overlaySettings.ringMode, overlaySettings.maxDistanceMiles, overlaySettings.selectedBodyId, chartBodies]);
 
     // Build overlay GeoJSON
     const overlay = useMemo<OverlayGeoJSON | null>(() => {
@@ -171,66 +179,73 @@ export function EventAnalystPage() {
     };
 
     return (
-        <div className="min-h-screen gradient-bg flex flex-col">
+        <div className="h-screen w-full overflow-hidden gradient-bg flex flex-col">
             {/* Header */}
-            <header className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <a
-                        href="/"
-                        className="text-white/50 hover:text-white transition-colors"
-                    >
-                        ← Back
-                    </a>
-                    <div className="w-px h-6 bg-white/20" />
-                    <h1 className="text-xl font-semibold text-white">Event Analyst</h1>
+            <header className="px-6 py-4 border-b border-white/5 bg-[#0B0C10]/80 backdrop-blur-xl flex items-center justify-between sticky top-0 z-20">
+                <div className="flex items-center gap-4">
+                    <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-green-500 bg-clip-text text-transparent">Event Analyst</h1>
                 </div>
-                <p className="text-white/40 text-sm hidden sm:block">
-                    Symbolic visualization • Not for investigative use
-                </p>
+                <div className="flex items-center gap-3">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <p className="text-white/30 text-xs font-mono hidden sm:block">
+                        LIVE SYSTEM • V2.0.26
+                    </p>
+                </div>
             </header>
 
             {/* Main Content */}
-            <div className="flex-1 flex overflow-hidden">
-                {/* Left Panel: Event List */}
-                <div className="w-72 flex-shrink-0 bg-white/5 border-r border-white/10 hidden lg:flex flex-col">
-                    <EventList
-                        events={events}
-                        selectedEventId={selectedEvent?.id || null}
-                        onSelectEvent={handleSelectEvent}
-                        onAddEvent={() => setIsModalOpen(true)}
+            <div className="flex-1 flex overflow-hidden relative">
+                {/* Left Panel: Chart Data */}
+                <div className="w-80 flex-shrink-0 bg-white/5 border-r border-white/5 hidden md:flex flex-col z-10 backdrop-blur-md">
+                    <ChartPanel
+                        bodies={chartBodies}
+                        settings={overlaySettings}
+                        onSettingsChange={setOverlaySettings}
+                        onBodySelect={handleBodySelect}
                     />
                 </div>
 
                 {/* Center: Map */}
-                <div className="flex-1 relative">
+                <div className="flex-1 relative bg-[#0B0C10]">
                     {isCalculating && (
-                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-                            <div className="flex items-center gap-3 text-white">
-                                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                <span>Calculating chart...</span>
+                        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                            <div className="flex flex-col items-center gap-4">
+                                <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+                                <span className="text-emerald-400 font-mono text-sm tracking-widest animate-pulse">CALCULATING...</span>
                             </div>
                         </div>
                     )}
                     {error && (
-                        <div className="absolute top-4 left-4 right-4 z-10 p-3 rounded-lg bg-red-500/20 border border-red-500/50 text-red-300 text-sm">
+                        <div className="absolute top-6 left-6 right-6 z-50 p-4 rounded-xl bg-red-500/10 border border-red-500/20 backdrop-blur-md text-red-400 text-sm flex items-center gap-3">
+                            <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
                             {error}
                         </div>
                     )}
-                    <MapLibreMap
-                        center={mapCenter}
-                        overlay={overlay}
-                        selectedBodyId={overlaySettings.selectedBodyId}
-                    />
+
+                    <div className="absolute inset-0 m-2 rounded-2xl overflow-hidden border border-white/5 shadow-2xl">
+                        <MapLibreMap
+                            center={mapCenter}
+                            overlay={overlay}
+                            selectedBodyId={overlaySettings.selectedBodyId}
+                            allEvents={events}
+                            onEventClick={(id) => {
+                                const event = events.find(e => e.id === id);
+                                if (event) handleSelectEvent(event);
+                            }}
+                        />
+                    </div>
 
                     {/* Mobile Event Selector */}
-                    <div className="lg:hidden absolute bottom-4 left-4 right-4">
+                    <div className="lg:hidden absolute bottom-6 left-6 right-6 z-10">
                         <select
                             value={selectedEvent?.id || ''}
                             onChange={(e) => {
                                 const event = events.find(ev => ev.id === e.target.value);
                                 if (event) handleSelectEvent(event);
                             }}
-                            className="w-full px-4 py-3 rounded-lg bg-slate-900/90 backdrop-blur-sm border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                            className="w-full px-4 py-3 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 appearance-none shadow-lg"
                         >
                             <option value="">Select an event...</option>
                             {events.map(ev => (
@@ -240,13 +255,13 @@ export function EventAnalystPage() {
                     </div>
                 </div>
 
-                {/* Right Panel: Chart Data */}
-                <div className="w-80 flex-shrink-0 bg-white/5 border-l border-white/10 hidden md:flex flex-col">
-                    <ChartPanel
-                        bodies={chartBodies}
-                        settings={overlaySettings}
-                        onSettingsChange={setOverlaySettings}
-                        onBodySelect={handleBodySelect}
+                {/* Right Panel: Event List */}
+                <div className="w-80 flex-shrink-0 hidden lg:flex flex-col z-10">
+                    <EventList
+                        events={events}
+                        selectedEventId={selectedEvent?.id || null}
+                        onSelectEvent={handleSelectEvent}
+                        onAddEvent={() => setIsModalOpen(true)}
                     />
                 </div>
             </div>

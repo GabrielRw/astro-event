@@ -4,19 +4,22 @@ import { useEffect, useRef, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { mapConfig } from '@/src/config/mapConfig';
-import type { OverlayGeoJSON } from '@/src/features/event-analyst/eventTypes';
+import type { OverlayGeoJSON, EventItem } from '@/src/features/event-analyst/eventTypes';
 
 interface MapLibreMapProps {
     center: { lat: number; lng: number };
     overlay: OverlayGeoJSON | null;
     selectedBodyId: string | null;
+    allEvents?: EventItem[];
+    onEventClick?: (eventId: string) => void;
     onMapReady?: () => void;
 }
 
-export function MapLibreMap({ center, overlay, selectedBodyId, onMapReady }: MapLibreMapProps) {
+export function MapLibreMap({ center, overlay, selectedBodyId, allEvents = [], onEventClick, onMapReady }: MapLibreMapProps) {
     const mapContainer = useRef<HTMLDivElement>(null);
     const map = useRef<maplibregl.Map | null>(null);
     const marker = useRef<maplibregl.Marker | null>(null);
+    const popup = useRef<maplibregl.Popup | null>(null);
 
     // Initialize map
     useEffect(() => {
@@ -53,6 +56,24 @@ export function MapLibreMap({ center, overlay, selectedBodyId, onMapReady }: Map
             map.current!.addSource('overlayRays', {
                 type: 'geojson',
                 data: { type: 'FeatureCollection', features: [] },
+            });
+
+            map.current!.addSource('allEvents', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: allEvents.map(event => ({
+                        type: 'Feature' as const,
+                        geometry: {
+                            type: 'Point' as const,
+                            coordinates: [event.location.lng, event.location.lat],
+                        },
+                        properties: {
+                            id: event.id,
+                            title: event.title,
+                        },
+                    }))
+                },
             });
 
             // Add ring fill layer
@@ -101,6 +122,75 @@ export function MapLibreMap({ center, overlay, selectedBodyId, onMapReady }: Map
                     'line-width': mapConfig.layers.rays.highlightWidth,
                     'line-opacity': 1,
                 },
+            });
+
+            // Add event markers glow (behind the main marker)
+            map.current!.addLayer({
+                id: 'event-markers-glow',
+                type: 'circle',
+                source: 'allEvents',
+                paint: {
+                    'circle-color': mapConfig.layers.eventMarkersGlow.color,
+                    'circle-radius': mapConfig.layers.eventMarkersGlow.radius,
+                    'circle-blur': mapConfig.layers.eventMarkersGlow.blur,
+                    'circle-opacity': mapConfig.layers.eventMarkersGlow.opacity,
+                },
+            });
+
+            // Add all events markers layer
+            map.current!.addLayer({
+                id: 'event-markers',
+                type: 'circle',
+                source: 'allEvents',
+                paint: {
+                    'circle-color': mapConfig.layers.eventMarkers.color,
+                    'circle-radius': mapConfig.layers.eventMarkers.radius,
+                    'circle-stroke-width': mapConfig.layers.eventMarkers.strokeWidth,
+                    'circle-stroke-color': mapConfig.layers.eventMarkers.strokeColor,
+                    'circle-opacity': 0.8,
+                },
+            });
+
+            // Handle event marker clicks
+            map.current!.on('click', 'event-markers', (e) => {
+                const feature = e.features?.[0];
+                const eventId = feature?.properties?.id;
+                if (eventId && onEventClick) {
+                    onEventClick(eventId);
+                }
+            });
+
+            // Cursor style and popup on hover
+            map.current!.on('mouseenter', 'event-markers', (e) => {
+                if (!map.current) return;
+                map.current.getCanvas().style.cursor = 'pointer';
+
+                const feature = e.features?.[0];
+                const title = feature?.properties?.title;
+                const coordinates = (feature?.geometry as any)?.coordinates?.slice();
+
+                if (title && coordinates) {
+                    if (popup.current) popup.current.remove();
+                    popup.current = new maplibregl.Popup({
+                        closeButton: false,
+                        closeOnClick: false,
+                        offset: 10,
+                        className: 'event-popup' // We can style this globally if needed
+                    })
+                        .setLngLat(coordinates)
+                        .setHTML(`<div class="text-slate-900 font-semibold text-sm px-1">${title}</div>`)
+                        .addTo(map.current);
+                }
+            });
+
+            map.current!.on('mouseleave', 'event-markers', () => {
+                if (map.current) {
+                    map.current.getCanvas().style.cursor = '';
+                    if (popup.current) {
+                        popup.current.remove();
+                        popup.current = null;
+                    }
+                }
             });
 
             onMapReady?.();
@@ -157,6 +247,30 @@ export function MapLibreMap({ center, overlay, selectedBodyId, onMapReady }: Map
             }
         }
     }, [overlay, updateOverlay]);
+
+    // Update all events markers
+    useEffect(() => {
+        if (!map.current?.getSource('allEvents') || !allEvents) return;
+
+        const source = map.current.getSource('allEvents') as maplibregl.GeoJSONSource;
+
+        const features = allEvents.map(event => ({
+            type: 'Feature' as const,
+            geometry: {
+                type: 'Point' as const,
+                coordinates: [event.location.lng, event.location.lat],
+            },
+            properties: {
+                id: event.id,
+                title: event.title,
+            },
+        }));
+
+        source.setData({
+            type: 'FeatureCollection',
+            features,
+        });
+    }, [allEvents]);
 
     // Update highlight filter
     useEffect(() => {

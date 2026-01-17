@@ -43,9 +43,9 @@ export function ChartPanel({ bodies, settings, onSettingsChange, onBodySelect }:
             <button
                 key={body.id}
                 onClick={() => onBodySelect(isSelected ? null : body.id)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${isSelected
-                        ? 'bg-amber-500/20 border border-amber-500/50'
-                        : 'hover:bg-white/5'
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all duration-200 border ${isSelected
+                    ? 'bg-emerald-500/10 border-emerald-500/30 shadow-[0_0_15px_-5px_rgba(16,185,129,0.2)]'
+                    : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.05] hover:border-white/10'
                     }`}
             >
                 <div className="flex items-center gap-2">
@@ -64,10 +64,12 @@ export function ChartPanel({ bodies, settings, onSettingsChange, onBodySelect }:
     };
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full bg-[#0B0C10]/80 backdrop-blur-xl border-r border-white/5 mx-2 my-2 rounded-2xl overflow-hidden">
             {/* Settings Section */}
-            <div className="p-4 border-b border-white/10 space-y-4">
-                <h2 className="text-lg font-semibold text-white">Chart Overlay</h2>
+            <div className="p-5 border-b border-white/5 space-y-5">
+                <h2 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-green-500 bg-clip-text text-transparent">
+                    Chart Overlay
+                </h2>
 
                 {/* Group Toggles */}
                 <div className="flex gap-2">
@@ -76,8 +78,8 @@ export function ChartPanel({ bodies, settings, onSettingsChange, onBodySelect }:
                             key={group}
                             onClick={() => toggleGroup(group)}
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-colors ${settings.enabledGroups[group]
-                                    ? 'bg-violet-500/20 text-violet-300 border border-violet-500/50'
-                                    : 'bg-white/5 text-white/50 border border-white/10'
+                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                : 'bg-white/5 text-white/40 border border-white/5 hover:bg-white/10'
                                 }`}
                         >
                             {group}
@@ -87,27 +89,27 @@ export function ChartPanel({ bodies, settings, onSettingsChange, onBodySelect }:
 
                 {/* Ring Mode */}
                 <div>
-                    <label className="block text-xs text-white/50 mb-1">Ring Mode</label>
+                    <label className="block text-[10px] uppercase tracking-wider text-white/30 font-semibold mb-2">Ring Mode</label>
                     <select
                         value={settings.ringMode}
                         onChange={(e) => setRingMode(e.target.value as RingMode)}
-                        className="w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                        className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/50 transition-colors"
                     >
-                        <option value="decimal" className="bg-slate-800">Decimal (1, 10, 100...)</option>
-                        <option value="degreeDerived" className="bg-slate-800">Degree-Derived</option>
+                        <option value="decimal" className="bg-[#0B0C10]">Decimal (1, 10, 100...)</option>
+                        <option value="degreeDerived" className="bg-[#0B0C10]">Degree-Derived</option>
                     </select>
                     {settings.ringMode === 'degreeDerived' && (
-                        <p className="text-xs text-white/40 mt-1">
-                            Rings scale based on IC degree (0.01×D, 0.1×D, 1×D...)
+                        <p className="text-[10px] text-white/30 mt-1.5 font-light">
+                            Rings scale based on IC degree (0.01×D, 0.1×D...)
                         </p>
                     )}
                 </div>
 
                 {/* Max Distance Slider */}
                 <div>
-                    <div className="flex justify-between text-xs text-white/50 mb-1">
+                    <div className="flex justify-between text-[10px] uppercase tracking-wider text-white/30 font-semibold mb-2">
                         <span>Max Distance</span>
-                        <span>{settings.maxDistanceMiles} mi</span>
+                        <span className="text-emerald-400">{settings.maxDistanceMiles} mi</span>
                     </div>
                     <input
                         type="range"
@@ -116,16 +118,16 @@ export function ChartPanel({ bodies, settings, onSettingsChange, onBodySelect }:
                         step={100}
                         value={settings.maxDistanceMiles}
                         onChange={(e) => setMaxDistance(Number(e.target.value))}
-                        className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-violet-500"
+                        className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500 hover:accent-emerald-400"
                     />
                 </div>
             </div>
 
             {/* Bodies List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-3 space-y-4">
                 {settings.enabledGroups.planets && groupedBodies.planets.length > 0 && (
                     <div>
-                        <h3 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2">Planets</h3>
+                        <h3 className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2 px-2">Planets</h3>
                         <div className="space-y-1">
                             {groupedBodies.planets.map(renderBodyRow)}
                         </div>
@@ -134,7 +136,7 @@ export function ChartPanel({ bodies, settings, onSettingsChange, onBodySelect }:
 
                 {settings.enabledGroups.angles && groupedBodies.angles.length > 0 && (
                     <div>
-                        <h3 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2">Angles</h3>
+                        <h3 className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2 px-2">Angles</h3>
                         <div className="space-y-1">
                             {groupedBodies.angles.map(renderBodyRow)}
                         </div>
@@ -143,7 +145,7 @@ export function ChartPanel({ bodies, settings, onSettingsChange, onBodySelect }:
 
                 {settings.enabledGroups.houses && groupedBodies.houses.length > 0 && (
                     <div>
-                        <h3 className="text-xs font-medium text-white/50 uppercase tracking-wider mb-2">Houses</h3>
+                        <h3 className="text-[10px] font-semibold text-white/30 uppercase tracking-wider mb-2 px-2">Houses</h3>
                         <div className="space-y-1">
                             {groupedBodies.houses.map(renderBodyRow)}
                         </div>
@@ -151,8 +153,11 @@ export function ChartPanel({ bodies, settings, onSettingsChange, onBodySelect }:
                 )}
 
                 {bodies.length === 0 && (
-                    <div className="text-center text-white/40 text-sm py-8">
-                        Select an event to view chart data
+                    <div className="flex flex-col items-center justify-center py-12 text-center opacity-40">
+                        <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center mb-3">
+                            <span className="text-xl">✨</span>
+                        </div>
+                        <p className="text-white text-xs">Select an event to view chart</p>
                     </div>
                 )}
             </div>
