@@ -87,23 +87,36 @@ export function ChartPanel({ bodies, settings, onSettingsChange, onBodySelect }:
                     ))}
                 </div>
 
-                {/* Ring Mode */}
-                <div>
-                    <label className="block text-[10px] uppercase tracking-wider text-white/30 font-semibold mb-2">Ring Mode</label>
-                    <select
-                        value={settings.ringMode}
-                        onChange={(e) => setRingMode(e.target.value as RingMode)}
-                        className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/50 transition-colors"
-                    >
-                        <option value="decimal" className="bg-[#0B0C10]">Decimal (1, 10, 100...)</option>
-                        <option value="degreeDerived" className="bg-[#0B0C10]">Degree-Derived</option>
-                    </select>
-                    {settings.ringMode === 'degreeDerived' && (
-                        <p className="text-[10px] text-white/30 mt-1.5 font-light">
-                            Rings scale based on IC degree (0.01×D, 0.1×D...)
-                        </p>
-                    )}
+                {/* Ring Mode & Unit */}
+                <div className="flex gap-2">
+                    <div className="flex-1">
+                        <label className="block text-[10px] uppercase tracking-wider text-white/30 font-semibold mb-2">Ring Mode</label>
+                        <select
+                            value={settings.ringMode}
+                            onChange={(e) => setRingMode(e.target.value as RingMode)}
+                            className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/50 transition-colors"
+                        >
+                            <option value="decimal" className="bg-[#0B0C10]">Decimal</option>
+                            <option value="degreeDerived" className="bg-[#0B0C10]">Degree-Derived</option>
+                        </select>
+                    </div>
+                    <div className="w-1/3">
+                        <label className="block text-[10px] uppercase tracking-wider text-white/30 font-semibold mb-2">Unit</label>
+                        <select
+                            value={settings.distanceUnit || 'miles'}
+                            onChange={(e) => onSettingsChange({ ...settings, distanceUnit: e.target.value as any })}
+                            className="w-full px-3 py-2 rounded-lg bg-black/20 border border-white/10 text-white text-xs focus:outline-none focus:border-emerald-500/50 transition-colors"
+                        >
+                            <option value="miles" className="bg-[#0B0C10]">Mi</option>
+                            <option value="km" className="bg-[#0B0C10]">Km</option>
+                        </select>
+                    </div>
                 </div>
+                {settings.ringMode === 'degreeDerived' && (
+                    <p className="text-[10px] text-white/30 mt-1.5 font-light">
+                        Rings: 0.1x, 1x, 10x, 100x of Degree
+                    </p>
+                )}
 
                 {/* Max Distance Slider */}
                 <div>

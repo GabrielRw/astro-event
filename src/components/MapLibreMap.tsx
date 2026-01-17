@@ -183,7 +183,72 @@ export function MapLibreMap({ center, overlay, selectedBodyId, allEvents = [], o
                 }
             });
 
-            map.current!.on('mouseleave', 'event-markers', () => {
+            map.current.on('mouseleave', 'event-markers', () => {
+                if (map.current) {
+                    map.current.getCanvas().style.cursor = '';
+                    if (popup.current) {
+                        popup.current.remove();
+                        popup.current = null;
+                    }
+                }
+            });
+
+            // --- INTERSECTIONS LAYER ---
+            map.current!.addSource('overlayIntersections', {
+                type: 'geojson',
+                data: { type: 'FeatureCollection', features: [] },
+            });
+
+            map.current!.addLayer({
+                id: 'intersections-points',
+                type: 'circle',
+                source: 'overlayIntersections',
+                paint: {
+                    'circle-color': '#ffffff',
+                    'circle-radius': 3,
+                    'circle-stroke-width': 1,
+                    'circle-stroke-color': '#000000',
+                    'circle-opacity': 0.9,
+                },
+            });
+
+            // Intersection interaction
+            map.current!.on('mouseenter', 'intersections-points', (e) => {
+                if (!map.current) return;
+                map.current.getCanvas().style.cursor = 'crosshair';
+
+                const feature = e.features?.[0];
+                const props = feature?.properties;
+                const coordinates = (feature?.geometry as any)?.coordinates?.slice();
+
+                if (props && coordinates) {
+                    if (popup.current) popup.current.remove();
+
+                    // Format Coordinates nicely
+                    const lat = props.lat;
+                    const lng = props.lng;
+                    const latStr = Math.abs(lat).toFixed(4) + (lat >= 0 ? '°N' : '°S');
+                    const lngStr = Math.abs(lng).toFixed(4) + (lng >= 0 ? '°E' : '°W');
+
+                    popup.current = new maplibregl.Popup({
+                        closeButton: false,
+                        closeOnClick: false,
+                        offset: 5,
+                        className: 'intersection-popup'
+                    })
+                        .setLngLat(coordinates)
+                        .setHTML(`
+                            <div class="text-slate-900 text-xs px-1">
+                                <div class="font-bold border-b border-slate-300 pb-1 mb-1">${props.bodyLabel} @ ${props.bearing.toFixed(1)}°</div>
+                                <div>Dist: <strong>${Math.round(props.ringRadius * 10) / 10} ${props.unit}</strong></div>
+                                <div class="mt-1 font-mono text-[10px] text-slate-600">${latStr}, ${lngStr}</div>
+                            </div>
+                        `)
+                        .addTo(map.current);
+                }
+            });
+
+            map.current!.on('mouseleave', 'intersections-points', () => {
                 if (map.current) {
                     map.current.getCanvas().style.cursor = '';
                     if (popup.current) {
@@ -228,12 +293,16 @@ export function MapLibreMap({ center, overlay, selectedBodyId, allEvents = [], o
 
         const ringsSource = map.current.getSource('overlayRings') as maplibregl.GeoJSONSource;
         const raysSource = map.current.getSource('overlayRays') as maplibregl.GeoJSONSource;
+        const intersectionsSource = map.current.getSource('overlayIntersections') as maplibregl.GeoJSONSource;
 
         if (ringsSource) {
             ringsSource.setData(overlayData.rings as GeoJSON.FeatureCollection);
         }
         if (raysSource) {
             raysSource.setData(overlayData.rays as GeoJSON.FeatureCollection);
+        }
+        if (intersectionsSource && overlayData.intersections) {
+            intersectionsSource.setData(overlayData.intersections as GeoJSON.FeatureCollection);
         }
     }, []);
 

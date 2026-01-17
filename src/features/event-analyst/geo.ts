@@ -9,8 +9,13 @@
 const EARTH_RADIUS_METERS = 6371000;
 
 // Conversion factors
+// Conversion factors
 const MILES_TO_METERS = 1609.344;
 const METERS_TO_MILES = 1 / MILES_TO_METERS;
+const KM_TO_METERS = 1000;
+const METERS_TO_KM = 0.001;
+const MILES_TO_KM = 1.609344;
+const KM_TO_MILES = 0.621371;
 
 /**
  * Convert miles to meters
@@ -20,10 +25,38 @@ export function milesToMeters(miles: number): number {
 }
 
 /**
+ * Convert km to meters
+ */
+export function kmToMeters(km: number): number {
+    return km * KM_TO_METERS;
+}
+
+/**
  * Convert meters to miles
  */
 export function metersToMiles(meters: number): number {
     return meters * METERS_TO_MILES;
+}
+
+/**
+ * Convert meters to km
+ */
+export function metersToKm(meters: number): number {
+    return meters * METERS_TO_KM;
+}
+
+/**
+ * Convert miles to km
+ */
+export function milesToKm(miles: number): number {
+    return miles * MILES_TO_KM;
+}
+
+/**
+ * Convert km to miles
+ */
+export function kmToMiles(km: number): number {
+    return km * KM_TO_MILES;
 }
 
 /**
@@ -189,7 +222,7 @@ export function computeDegreeDerivedRings(
         return computeDecimalRings(maxDistanceMiles);
     }
 
-    const multipliers = [0.01, 0.1, 1, 10, 100];
+    const multipliers = [0.1, 1, 10, 100];
     // Return all rings regardless of maxDistanceMiles, as the line must touch the largest one
     return multipliers.map(m => m * referenceDegree);
 }

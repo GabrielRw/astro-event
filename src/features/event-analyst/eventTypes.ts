@@ -58,6 +58,9 @@ export interface ChartBody {
 // Ring calculation mode
 export type RingMode = 'decimal' | 'degreeDerived';
 
+// Distance unit
+export type DistanceUnit = 'miles' | 'km';
+
 // Overlay display settings
 export interface OverlaySettings {
     enabledGroups: {
@@ -65,7 +68,8 @@ export interface OverlaySettings {
         angles: boolean;
         houses: boolean;
     };
-    maxDistanceMiles: number;
+    maxDistanceMiles: number; // Keeping internal logic in miles for simplicity, or we convert
+    distanceUnit: DistanceUnit; // Display unit
     ringMode: RingMode;
     ringValuesMiles: number[];
     showLabelsOnMap: boolean;
@@ -80,7 +84,8 @@ export const DEFAULT_OVERLAY_SETTINGS: OverlaySettings = {
         houses: false,
     },
     maxDistanceMiles: 1600,
-    ringMode: 'decimal',
+    distanceUnit: 'miles',
+    ringMode: 'degreeDerived',
     ringValuesMiles: [1, 10, 100, 1000, 1600],
     showLabelsOnMap: true,
     selectedBodyId: null,
@@ -105,12 +110,30 @@ export interface RayFeature {
 export interface RingFeature {
     type: 'Feature';
     properties: {
-        radiusMiles: number;
+        radius: number; // Value in current unit
+        unit: string;
         label: string;
     };
     geometry: {
         type: 'Polygon';
         coordinates: [number, number][][];
+    };
+}
+
+export interface IntersectionFeature {
+    type: 'Feature';
+    properties: {
+        bodyId: string;
+        bodyLabel: string;
+        ringRadius: number; // Value in current unit
+        unit: string;
+        bearing: number;
+        lat: number;
+        lng: number;
+    };
+    geometry: {
+        type: 'Point';
+        coordinates: [number, number];
     };
 }
 
@@ -122,5 +145,9 @@ export interface OverlayGeoJSON {
     rings: {
         type: 'FeatureCollection';
         features: RingFeature[];
+    };
+    intersections: {
+        type: 'FeatureCollection';
+        features: IntersectionFeature[];
     };
 }

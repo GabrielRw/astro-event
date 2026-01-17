@@ -8,44 +8,50 @@ interface EventListProps {
     selectedEventId: string | null;
     onSelectEvent: (event: EventItem) => void;
     onAddEvent: () => void;
+    onLoadMore?: () => void;
+    hasMore?: boolean;
+    isLoadingMore?: boolean;
+    dateRange: { start: string; end: string };
+    onDateRangeChange: (range: { start: string; end: string }) => void;
+    activeFilters: string[];
+    onFilterChange: (filters: string[]) => void;
 }
 
-export function EventList({ events, selectedEventId, onSelectEvent, onAddEvent }: EventListProps) {
+export function EventList({
+    events,
+    selectedEventId,
+    onSelectEvent,
+    onAddEvent,
+    onLoadMore,
+    hasMore,
+    isLoadingMore,
+    dateRange,
+    onDateRangeChange,
+    activeFilters,
+    onFilterChange
+}: EventListProps) {
     const [searchQuery, setSearchQuery] = useState('');
     const [showFilters, setShowFilters] = useState(false);
-    const [activeFilters, setActiveFilters] = useState<string[]>(['historical', 'uk-police', 'us-city']);
-    const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
 
     const toggleFilter = (source: string) => {
-        setActiveFilters(prev =>
-            prev.includes(source) ? prev.filter(s => s !== source) : [...prev, source]
+        onFilterChange(
+            activeFilters.includes(source) ? activeFilters.filter(s => s !== source) : [...activeFilters, source]
         );
+    };
+
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
+        if (scrollHeight - scrollTop <= clientHeight + 50) { // Load when near bottom
+            if (hasMore && !isLoadingMore && onLoadMore) {
+                onLoadMore();
+            }
+        }
     };
 
     const filteredEvents = events.filter(event => {
         const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             event.location.label.toLowerCase().includes(searchQuery.toLowerCase());
-
-        // Default to 'historical' if source is missing
-        const source = event.dataSource || 'historical';
-        const matchesFilter = activeFilters.includes(source);
-
-        // Date Range Check
-        let matchesDate = true;
-        if (dateRange.start || dateRange.end) {
-            const eventDate = new Date(event.datetimeISO);
-            if (dateRange.start) {
-                matchesDate = matchesDate && eventDate >= new Date(dateRange.start);
-            }
-            if (dateRange.end) {
-                // Set end date to end of day
-                const endDate = new Date(dateRange.end);
-                endDate.setHours(23, 59, 59, 999);
-                matchesDate = matchesDate && eventDate <= endDate;
-            }
-        }
-
-        return matchesSearch && matchesFilter && matchesDate;
+        return matchesSearch;
     });
 
     const formatDate = (isoString: string) => {
@@ -122,7 +128,7 @@ export function EventList({ events, selectedEventId, onSelectEvent, onAddEvent }
                                     <input
                                         type="date"
                                         value={dateRange.start}
-                                        onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                                        onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
                                         className="w-full bg-black/20 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500/50"
                                     />
                                 </div>
@@ -131,7 +137,7 @@ export function EventList({ events, selectedEventId, onSelectEvent, onAddEvent }
                                     <input
                                         type="date"
                                         value={dateRange.end}
-                                        onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                                        onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
                                         className="w-full bg-black/20 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500/50"
                                     />
                                 </div>
@@ -156,7 +162,10 @@ export function EventList({ events, selectedEventId, onSelectEvent, onAddEvent }
             </div>
 
             {/* Event List */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            <div
+                className="flex-1 overflow-y-auto p-3 space-y-2"
+                onScroll={handleScroll}
+            >
                 {filteredEvents.map(event => (
                     <button
                         key={event.id}
@@ -193,7 +202,13 @@ export function EventList({ events, selectedEventId, onSelectEvent, onAddEvent }
                     </button>
                 ))}
 
-                {filteredEvents.length === 0 && (
+                {isLoadingMore && (
+                    <div className="py-4 flex justify-center">
+                        <div className="w-6 h-6 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+                    </div>
+                )}
+
+                {!isLoadingMore && filteredEvents.length === 0 && (
                     <div className="p-8 text-center">
                         <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/5 mb-3 text-white/20">
                             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

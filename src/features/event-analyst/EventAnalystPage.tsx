@@ -13,15 +13,87 @@ import type { EventItem, ChartBody, OverlaySettings, OverlayGeoJSON, ZodiacSign 
 import { DEFAULT_OVERLAY_SETTINGS } from './eventTypes';
 
 export function EventAnalystPage() {
-    const [events, setEvents] = useState<EventItem[]>(sampleEvents);
+    // Search & Filter State
+    const [events, setEvents] = useState<EventItem[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
+    const [activeFilters, setActiveFilters] = useState<string[]>(['us-city', 'uk-police']);
+    const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
+        start: '2023-01-01',
+        end: new Date().toISOString().slice(0, 10)
+    });
+
+    // Pagination State
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Other State
     const [chartBodies, setChartBodies] = useState<ChartBody[]>([]);
     const [overlaySettings, setOverlaySettings] = useState<OverlaySettings>(DEFAULT_OVERLAY_SETTINGS);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCalculating, setIsCalculating] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Calculate chart when event is selected
+    // Initial Load & Filter Change
+    useEffect(() => {
+        // Reset and fetch
+        setPage(1);
+        setEvents([]);
+        loadEvents(1, true);
+    }, [activeFilters, dateRange]);
+
+    const loadEvents = async (pageNum: number, reset: boolean = false) => {
+        if (!activeFilters.includes('uk-police') && !activeFilters.includes('us-city') && !activeFilters.includes('historical')) {
+            setEvents(reset ? [] : prev => prev);
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            // Import dynamically to avoid SSR issues if any, though here it's client comp
+            const { fetchEvents } = await import('./services/eventService');
+
+            // If historical is active, include sample events? 
+            let newEvents: EventItem[] = [];
+
+            if (activeFilters.includes('historical') && pageNum === 1) {
+                newEvents = [...sampleEvents];
+            }
+
+            // Fetch Real Data
+            const realSources = activeFilters.filter(f => f !== 'historical');
+            if (realSources.length > 0) {
+                const result = await fetchEvents({
+                    startDate: new Date(dateRange.start),
+                    endDate: new Date(dateRange.end),
+                    page: pageNum,
+                    limit: 50,
+                    sources: realSources
+                });
+                newEvents = [...newEvents, ...result.data];
+                setHasMore(result.hasMore);
+            } else {
+                setHasMore(false);
+            }
+
+            setEvents(prev => reset ? newEvents : [...prev, ...newEvents]);
+        } catch (err) {
+            console.error('Failed to load events', err);
+            setError('Failed to load events. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleLoadMore = () => {
+        if (!isLoading && hasMore) {
+            const nextPage = page + 1;
+            setPage(nextPage);
+            loadEvents(nextPage);
+        }
+    };
+
+    // Calculate chart when event is selected (Keep existing logic)
     useEffect(() => {
         if (!selectedEvent) {
             setChartBodies([]);
@@ -170,7 +242,7 @@ export function EventAnalystPage() {
     };
 
     const handleAddEvent = (event: EventItem) => {
-        setEvents(prev => [...prev, event]);
+        setEvents(prev => [event, ...prev]);
         setSelectedEvent(event);
     };
 
@@ -258,10 +330,17 @@ export function EventAnalystPage() {
                 {/* Right Panel: Event List */}
                 <div className="w-80 flex-shrink-0 hidden lg:flex flex-col z-10">
                     <EventList
-                        events={events}
+                        events={events} // We already filtered state-side or api-side.
                         selectedEventId={selectedEvent?.id || null}
                         onSelectEvent={handleSelectEvent}
                         onAddEvent={() => setIsModalOpen(true)}
+                        onLoadMore={handleLoadMore}
+                        hasMore={hasMore}
+                        isLoadingMore={isLoading}
+                        dateRange={dateRange}
+                        onDateRangeChange={setDateRange}
+                        activeFilters={activeFilters}
+                        onFilterChange={setActiveFilters}
                     />
                 </div>
             </div>
