@@ -269,7 +269,7 @@ export function MapLibreMap({ center, overlay, selectedBodyId, allEvents = [], o
                     const latStr = Math.abs(lat).toFixed(4) + (lat >= 0 ? '°N' : '°S');
                     const lngStr = Math.abs(lng).toFixed(4) + (lng >= 0 ? '°E' : '°W');
 
-                    popup.current = new maplibregl.Popup({
+                    const popupInstance = new maplibregl.Popup({
                         closeButton: false,
                         closeOnClick: false,
                         offset: 5,
@@ -281,9 +281,44 @@ export function MapLibreMap({ center, overlay, selectedBodyId, allEvents = [], o
                                 <div class="font-bold border-b border-slate-300 pb-1 mb-1">${props.bodyLabel} @ ${props.bearing.toFixed(1)}°</div>
                                 <div>Dist: <strong>${Math.round(props.ringRadius * 10) / 10} ${props.unit}</strong></div>
                                 <div class="mt-1 font-mono text-[10px] text-slate-600">${latStr}, ${lngStr}</div>
+                                <div class="mt-1 pt-1 border-t border-slate-200 text-[10px] text-slate-500 italic animate-pulse">Scanning street...</div>
                             </div>
                         `)
                         .addTo(map.current);
+
+                    popup.current = popupInstance;
+
+                    // Reverse Geocode Intersection
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`, {
+                        headers: { 'User-Agent': 'AstroNatalChart/1.0' }
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (popup.current === popupInstance) {
+                                const address = data.address?.road || data.address?.pedestrian || data.address?.suburb || 'Street not found';
+
+                                popupInstance.setHTML(`
+                                    <div class="text-slate-900 text-xs px-1">
+                                        <div class="font-bold border-b border-slate-300 pb-1 mb-1">${props.bodyLabel} @ ${props.bearing.toFixed(1)}°</div>
+                                        <div>Dist: <strong>${Math.round(props.ringRadius * 10) / 10} ${props.unit}</strong></div>
+                                        <div class="mt-1 font-mono text-[10px] text-slate-600">${latStr}, ${lngStr}</div>
+                                        <div class="mt-1 pt-1 border-t border-slate-200 text-[10px] text-emerald-700 font-medium">${address}</div>
+                                    </div>
+                                `);
+                            }
+                        })
+                        .catch(() => {
+                            if (popup.current === popupInstance) {
+                                // removing the loading text on error
+                                popupInstance.setHTML(`
+                                    <div class="text-slate-900 text-xs px-1">
+                                        <div class="font-bold border-b border-slate-300 pb-1 mb-1">${props.bodyLabel} @ ${props.bearing.toFixed(1)}°</div>
+                                        <div>Dist: <strong>${Math.round(props.ringRadius * 10) / 10} ${props.unit}</strong></div>
+                                        <div class="mt-1 font-mono text-[10px] text-slate-600">${latStr}, ${lngStr}</div>
+                                    </div>
+                                `);
+                            }
+                        });
                 }
             });
 
