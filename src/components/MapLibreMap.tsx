@@ -222,7 +222,7 @@ export function MapLibreMap({ center, overlay, selectedBodyId, allEvents = [], o
                 }
             });
 
-            map.current.on('mouseleave', 'event-markers', () => {
+            map.current!.on('mouseleave', 'event-markers', () => {
                 if (map.current) {
                     map.current.getCanvas().style.cursor = '';
                     if (popup.current) {
