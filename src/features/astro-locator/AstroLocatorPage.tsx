@@ -93,7 +93,7 @@ export function AstroLocatorPage() {
                 };
 
                 // Resolve
-                const production = resolveHoraryDirection(selectedHouseId, chart);
+                const production = resolveHoraryDirection(selectedHouseId, chart, userLocation.lat);
                 setResolverOutput(production);
                 setStatusMsg('Analysis complete.');
 
