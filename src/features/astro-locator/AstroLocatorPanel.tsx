@@ -6,15 +6,11 @@ import { HOUSE_CATEGORIES } from './types';
 interface AstroLocatorPanelProps {
     onSelectHouse: (houseId: number) => void;
     selectedHouseId: number | null;
-    query: string;
-    onQueryChange: (val: string) => void;
 }
 
 export function AstroLocatorPanel({
     onSelectHouse,
-    selectedHouseId,
-    query,
-    onQueryChange
+    selectedHouseId
 }: AstroLocatorPanelProps) {
 
     return (
@@ -29,19 +25,6 @@ export function AstroLocatorPanel({
                     </p>
                 </div>
 
-                {/* Query Input */}
-                <div className="space-y-2">
-                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                        Search Intent
-                    </label>
-                    <input
-                        type="text"
-                        value={query}
-                        onChange={(e) => onQueryChange(e.target.value)}
-                        placeholder="e.g. My keys, A quiet cafe..."
-                        className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all"
-                    />
-                </div>
             </div>
 
             {/* Categories */}
@@ -85,6 +68,6 @@ export function AstroLocatorPanel({
                     "This tool provides directional guidance and search hints. It does not guarantee exact locations."
                 </p>
             </div>
-        </div>
+        </div >
     );
 }

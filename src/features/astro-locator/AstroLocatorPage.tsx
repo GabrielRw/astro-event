@@ -2,21 +2,22 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Navigation } from 'lucide-react';
+import { ArrowLeft, Navigation, MapPin } from 'lucide-react';
 import { AstroLocatorMap } from './AstroLocatorMap';
 import { AstroLocatorPanel } from './AstroLocatorPanel';
+import { LocationModal } from './LocationModal';
 import { resolveHoraryDirection } from './resolver';
 import { ResolverOutput, MinimalChart } from './types';
 import { mapConfig } from '@/src/config/mapConfig';
 
 export function AstroLocatorPage() {
-    const [query, setQuery] = useState('');
     const [selectedHouseId, setSelectedHouseId] = useState<number | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
     const [resolverOutput, setResolverOutput] = useState<ResolverOutput | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [statusMsg, setStatusMsg] = useState('Waiting for location...');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
 
     // 1. Get Geolocation on Mount
     useEffect(() => {
@@ -31,13 +32,16 @@ export function AstroLocatorPage() {
                 },
                 (error) => {
                     console.error('Geolocation Error:', error);
-                    setStatusMsg('Location access denied. Using default.');
+                    setStatusMsg('Location access denied. Please set location manually.');
                     setUserLocation(mapConfig.defaults.center);
+                    // Open modal if auto-location fails
+                    setIsLocationModalOpen(true);
                 }
             );
         } else {
             setStatusMsg('Geolocation not supported. Using default.');
             setUserLocation(mapConfig.defaults.center);
+            setIsLocationModalOpen(true);
         }
     }, []);
 
@@ -116,10 +120,13 @@ export function AstroLocatorPage() {
 
                 {/* Mobile Toggle & Location */}
                 <div className="flex items-center gap-3">
-                    <span className="text-xs font-mono text-slate-500 flex items-center gap-2">
+                    <button
+                        onClick={() => setIsLocationModalOpen(true)}
+                        className="text-xs font-mono text-slate-500 hover:text-purple-400 flex items-center gap-2 transition-colors"
+                    >
                         <Navigation className="w-3 h-3" />
-                        {userLocation ? `${userLocation.lat.toFixed(2)}, ${userLocation.lng.toFixed(2)}` : 'Locating...'}
-                    </span>
+                        {userLocation ? `${userLocation.lat.toFixed(2)}, ${userLocation.lng.toFixed(2)}` : 'Set Location'}
+                    </button>
 
                     {/* Mobile Menu Button */}
                     <button
@@ -140,8 +147,6 @@ export function AstroLocatorPage() {
                     ${isMobileMenuOpen ? 'absolute inset-y-0 left-0 w-96' : 'hidden md:flex'}
                 `}>
                     <AstroLocatorPanel
-                        query={query}
-                        onQueryChange={setQuery}
                         selectedHouseId={selectedHouseId}
                         onSelectHouse={setSelectedHouseId}
                     />
@@ -178,7 +183,7 @@ export function AstroLocatorPage() {
 
                     {/* Results Overlay */}
                     {resolverOutput && !isLoading && (
-                        <div className="absolute top-6 right-6 z-10 w-80 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl transition-all">
+                        <div className="absolute top-6 right-6 z-10 w-80 bg-black/90 backdrop-blur-xl border border-white/10 rounded-2xl p-5 shadow-2xl transition-all hidden md:block">
                             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 border-b border-white/10 pb-2">
                                 Horary Analysis
                             </h3>
@@ -207,8 +212,26 @@ export function AstroLocatorPage() {
                             </div>
                         </div>
                     )}
+
+                    {/* Location FAB (Bottom Right) */}
+                    <button
+                        onClick={() => setIsLocationModalOpen(true)}
+                        className="absolute bottom-6 right-6 z-20 w-12 h-12 rounded-full bg-purple-600 hover:bg-purple-500 text-white shadow-lg flex items-center justify-center transition-transform hover:scale-105"
+                        title="Set Location"
+                    >
+                        <MapPin className="w-5 h-5" />
+                    </button>
                 </div>
             </div>
+
+            <LocationModal
+                isOpen={isLocationModalOpen}
+                onClose={() => setIsLocationModalOpen(false)}
+                onLocationSelect={(loc) => {
+                    setUserLocation({ lat: loc.lat, lng: loc.lng });
+                    setStatusMsg(`Location set: ${loc.label || 'Manual'}`);
+                }}
+            />
         </div>
     );
 }
