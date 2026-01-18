@@ -6,11 +6,15 @@ import { HOUSE_CATEGORIES } from './types';
 interface AstroLocatorPanelProps {
     onSelectHouse: (houseId: number) => void;
     selectedHouseId: number | null;
+    date: string;
+    onDateChange: (date: string) => void;
 }
 
 export function AstroLocatorPanel({
     onSelectHouse,
-    selectedHouseId
+    selectedHouseId,
+    date,
+    onDateChange
 }: AstroLocatorPanelProps) {
 
     return (
@@ -25,6 +29,18 @@ export function AstroLocatorPanel({
                     </p>
                 </div>
 
+                {/* Date Selection */}
+                <div className="space-y-2">
+                    <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        Search Time
+                    </label>
+                    <input
+                        type="datetime-local"
+                        value={date}
+                        onChange={(e) => onDateChange(e.target.value)}
+                        className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all text-sm color-scheme-dark"
+                    />
+                </div>
             </div>
 
             {/* Categories */}

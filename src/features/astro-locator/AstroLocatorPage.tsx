@@ -13,6 +13,12 @@ import { mapConfig } from '@/src/config/mapConfig';
 export function AstroLocatorPage() {
     const [selectedHouseId, setSelectedHouseId] = useState<number | null>(null);
     const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
+    // Initialize with current local datetime formatted for input (YYYY-MM-DDThh:mm)
+    const [date, setDate] = useState(() => {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        return now.toISOString().slice(0, 16);
+    });
     const [resolverOutput, setResolverOutput] = useState<ResolverOutput | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [statusMsg, setStatusMsg] = useState('Waiting for location...');
@@ -55,18 +61,18 @@ export function AstroLocatorPage() {
             setStatusMsg('Calculating horary chart...');
 
             try {
-                // Fetch live chart for NOW
-                const now = new Date();
+                // Fetch chart for selected date
+                const searchDate = new Date(date);
                 const response = await fetch('/api/natal', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         name: 'Horary Query',
-                        year: now.getUTCFullYear(),
-                        month: now.getUTCMonth() + 1,
-                        day: now.getUTCDate(),
-                        hour: now.getUTCHours(),
-                        minute: now.getUTCMinutes(),
+                        year: searchDate.getFullYear(),
+                        month: searchDate.getMonth() + 1,
+                        day: searchDate.getDate(),
+                        hour: searchDate.getHours(),
+                        minute: searchDate.getMinutes(),
                         city: 'Local', // Not used for coords if lat/lng provided
                         lat: userLocation.lat,
                         lng: userLocation.lng,
@@ -100,7 +106,7 @@ export function AstroLocatorPage() {
         };
 
         analyze();
-    }, [selectedHouseId, userLocation]);
+    }, [selectedHouseId, userLocation, date]);
 
     return (
         <div className="h-screen w-full overflow-hidden gradient-bg flex flex-col">
@@ -149,6 +155,8 @@ export function AstroLocatorPage() {
                     <AstroLocatorPanel
                         selectedHouseId={selectedHouseId}
                         onSelectHouse={setSelectedHouseId}
+                        date={date}
+                        onDateChange={setDate}
                     />
                 </div>
 
