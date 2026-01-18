@@ -34,6 +34,9 @@ export function EventAnalystPage() {
     const [isCalculating, setIsCalculating] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Mobile Navigation State
+    const [activeMobileTab, setActiveMobileTab] = useState<'map' | 'chart' | 'events'>('map');
+
     // Initial Load & Filter Change
     useEffect(() => {
         // Reset and fetch
@@ -267,7 +270,7 @@ export function EventAnalystPage() {
 
             {/* Main Content */}
             <div className="flex-1 flex overflow-hidden relative">
-                {/* Left Panel: Chart Data */}
+                {/* Left Panel: Chart Data (Desktop) */}
                 <div className="w-80 flex-shrink-0 bg-white/5 border-r border-white/5 hidden md:flex flex-col z-10 backdrop-blur-md">
                     <ChartPanel
                         bodies={chartBodies}
@@ -277,8 +280,8 @@ export function EventAnalystPage() {
                     />
                 </div>
 
-                {/* Center: Map */}
-                <div className="flex-1 relative bg-[#0B0C10]">
+                {/* Center: Map (Visible if Tab is Map or on Desktop) */}
+                <div className={`flex-1 relative bg-[#0B0C10] ${activeMobileTab === 'map' ? 'block' : 'hidden md:block'}`}>
                     {isCalculating && (
                         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
                             <div className="flex flex-col items-center gap-4">
@@ -309,26 +312,59 @@ export function EventAnalystPage() {
                         />
                     </div>
 
-                    {/* Mobile Event Selector */}
-                    <div className="lg:hidden absolute bottom-6 left-6 right-6 z-10">
-                        <select
-                            value={selectedEvent?.id || ''}
-                            onChange={(e) => {
-                                const event = events.find(ev => ev.id === e.target.value);
-                                if (event) handleSelectEvent(event);
-                            }}
-                            className="w-full px-4 py-3 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 appearance-none shadow-lg"
-                        >
-                            <option value="">Select an event...</option>
-                            {events.map(ev => (
-                                <option key={ev.id} value={ev.id}>{ev.title}</option>
-                            ))}
-                        </select>
-                    </div>
+                    {/* Mobile Event Selector (Optional now that we have Tabs, but good for Map View) */}
+                    {activeMobileTab === 'map' && (
+                        <div className="lg:hidden absolute bottom-6 left-6 right-6 z-10 pb-16">
+                            {/* Added pb-16 to avoid bottom nav overlap */}
+                            <select
+                                value={selectedEvent?.id || ''}
+                                onChange={(e) => {
+                                    const event = events.find(ev => ev.id === e.target.value);
+                                    if (event) handleSelectEvent(event);
+                                }}
+                                className="w-full px-4 py-3 rounded-xl bg-black/80 backdrop-blur-xl border border-white/10 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/50 appearance-none shadow-lg"
+                            >
+                                <option value="">Select an event...</option>
+                                {events.map(ev => (
+                                    <option key={ev.id} value={ev.id}>{ev.title}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                 </div>
 
-                {/* Right Panel: Event List */}
-                <div className="w-80 flex-shrink-0 hidden lg:flex flex-col z-10">
+                {/* Mobile View: Chart Panel */}
+                <div className={`flex-1 bg-[#0B0C10] md:hidden flex flex-col ${activeMobileTab === 'chart' ? 'block' : 'hidden'}`}>
+                    <ChartPanel
+                        bodies={chartBodies}
+                        settings={overlaySettings}
+                        onSettingsChange={setOverlaySettings}
+                        onBodySelect={handleBodySelect}
+                    />
+                </div>
+
+                {/* Mobile View: Event List */}
+                <div className={`flex-1 bg-[#0B0C10] md:hidden flex flex-col ${activeMobileTab === 'events' ? 'block' : 'hidden'}`}>
+                    <EventList
+                        events={events}
+                        selectedEventId={selectedEvent?.id || null}
+                        onSelectEvent={(ev) => {
+                            handleSelectEvent(ev);
+                            setActiveMobileTab('map'); // Switch to map on selection
+                        }}
+                        onAddEvent={() => setIsModalOpen(true)}
+                        onLoadMore={handleLoadMore}
+                        hasMore={hasMore}
+                        isLoadingMore={isLoading}
+                        dateRange={dateRange}
+                        onDateRangeChange={setDateRange}
+                        activeFilters={activeFilters}
+                        onFilterChange={setActiveFilters}
+                    />
+                </div>
+
+                {/* Right Panel: Event List (Desktop) */}
+                <div className="w-80 flex-shrink-0 hidden lg:flex flex-col z-10 border-l border-white/5 bg-white/5 backdrop-blur-md">
                     <EventList
                         events={events} // We already filtered state-side or api-side.
                         selectedEventId={selectedEvent?.id || null}
@@ -343,6 +379,41 @@ export function EventAnalystPage() {
                         onFilterChange={setActiveFilters}
                     />
                 </div>
+            </div>
+
+            {/* Mobile Bottom Navigation */}
+            <div className="md:hidden flex items-center justify-around border-t border-white/10 bg-[#0B0C10]/95 backdrop-blur-xl pb-safe">
+                <button
+                    onClick={() => setActiveMobileTab('chart')}
+                    className={`flex flex-col items-center py-3 px-6 gap-1 ${activeMobileTab === 'chart' ? 'text-emerald-400' : 'text-slate-500'}`}
+                >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
+                    </svg>
+                    <span className="text-[10px] font-medium uppercase tracking-wide">Chart</span>
+                </button>
+
+                <button
+                    onClick={() => setActiveMobileTab('map')}
+                    className={`flex flex-col items-center py-3 px-6 gap-1 ${activeMobileTab === 'map' ? 'text-emerald-400' : 'text-slate-500'}`}
+                >
+                    {/* Map Icon */}
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    <span className="text-[10px] font-medium uppercase tracking-wide">Map</span>
+                </button>
+
+                <button
+                    onClick={() => setActiveMobileTab('events')}
+                    className={`flex flex-col items-center py-3 px-6 gap-1 ${activeMobileTab === 'events' ? 'text-emerald-400' : 'text-slate-500'}`}
+                >
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    <span className="text-[10px] font-medium uppercase tracking-wide">Events</span>
+                </button>
             </div>
 
             {/* Add Event Modal */}
