@@ -100,6 +100,56 @@ export function AstroLocatorMap({ center, resolverOutput }: AstroLocatorMapProps
                     'text-halo-width': 2,
                 }
             });
+            // Source for Azimuth Line
+            map.current!.addSource('azimuthSource', {
+                type: 'geojson',
+                data: { type: 'FeatureCollection', features: [] }
+            });
+
+            // Source for Moon Line
+            map.current!.addSource('moonSource', {
+                type: 'geojson',
+                data: { type: 'FeatureCollection', features: [] }
+            });
+
+            // Layer: Azimuth Line (Target)
+            map.current!.addLayer({
+                id: 'azimuth-line-layer',
+                type: 'line',
+                source: 'azimuthSource',
+                paint: {
+                    'line-color': '#f472b6', // Pink-400
+                    'line-width': 3,
+                    'line-opacity': 0.9,
+                }
+            });
+
+            // Layer: Moon Line
+            map.current!.addLayer({
+                id: 'moon-line-layer',
+                type: 'line',
+                source: 'moonSource',
+                paint: {
+                    'line-color': '#94a3b8', // Slate-400
+                    'line-width': 2,
+                    'line-dasharray': [4, 4],
+                    'line-opacity': 0.8,
+                }
+            });
+
+            // Label for Moon
+            map.current!.addLayer({
+                id: 'moon-label',
+                type: 'symbol',
+                source: 'moonSource',
+                layout: {
+                    'text-field': 'Moon',
+                    'text-size': 10,
+                    'symbol-placement': 'line-center',
+                    'text-offset': [0, 1]
+                },
+                paint: { 'text-color': '#94a3b8' }
+            });
         });
 
         // Cleanup
@@ -135,16 +185,20 @@ export function AstroLocatorMap({ center, resolverOutput }: AstroLocatorMapProps
 
         const sectorSource = map.current.getSource('sectorSource') as maplibregl.GeoJSONSource;
         const ringsSource = map.current.getSource('ringsSource') as maplibregl.GeoJSONSource;
+        const azimuthSource = map.current.getSource('azimuthSource') as maplibregl.GeoJSONSource;
+        const moonSource = map.current.getSource('moonSource') as maplibregl.GeoJSONSource;
 
         if (!resolverOutput) {
             sectorSource?.setData({ type: 'FeatureCollection', features: [] });
             ringsSource?.setData({ type: 'FeatureCollection', features: [] });
+            azimuthSource?.setData({ type: 'FeatureCollection', features: [] });
+            moonSource?.setData({ type: 'FeatureCollection', features: [] });
             return;
         }
 
         const centerPt = [center.lng, center.lat];
         const { startDeg, endDeg } = resolverOutput.sector;
-        const radiusKm = 5000; // Large enough to cover screen
+        const radiusKm = 5000;
 
         // Create Wedge
         const wedge = turf.sector(centerPt, radiusKm, startDeg, endDeg, { units: 'kilometers' });
@@ -154,7 +208,7 @@ export function AstroLocatorMap({ center, resolverOutput }: AstroLocatorMapProps
             features: [wedge]
         });
 
-        // Create Rings for Distance Hints (Array)
+        // Create Rings
         const rings = resolverOutput.distanceHints.map(hint =>
             turf.circle(centerPt, hint.km, { units: 'kilometers', properties: { label: hint.label } })
         );
@@ -163,6 +217,24 @@ export function AstroLocatorMap({ center, resolverOutput }: AstroLocatorMapProps
             type: 'FeatureCollection',
             features: rings
         });
+
+        // Azimuth Line
+        if (resolverOutput.actualAzimuth !== undefined) {
+            const dest = turf.destination(centerPt, radiusKm, resolverOutput.actualAzimuth, { units: 'kilometers' });
+            const line = turf.lineString([centerPt, dest.geometry.coordinates], { label: 'Target' });
+            azimuthSource?.setData({ type: 'FeatureCollection', features: [line] });
+        } else {
+            azimuthSource?.setData({ type: 'FeatureCollection', features: [] });
+        }
+
+        // Moon Line
+        if (resolverOutput.moonAzimuth !== undefined) {
+            const dest = turf.destination(centerPt, radiusKm, resolverOutput.moonAzimuth, { units: 'kilometers' });
+            const line = turf.lineString([centerPt, dest.geometry.coordinates], { label: 'Moon' });
+            moonSource?.setData({ type: 'FeatureCollection', features: [line] });
+        } else {
+            moonSource?.setData({ type: 'FeatureCollection', features: [] });
+        }
 
     }, [resolverOutput, center]);
 

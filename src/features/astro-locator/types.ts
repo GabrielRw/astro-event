@@ -38,6 +38,8 @@ export interface ResolverOutput {
         targetRuler: string;
         targetHouse: number;
     };
+    actualAzimuth?: number;
+    moonAzimuth?: number;
     debug?: any;
 }
 

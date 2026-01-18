@@ -15,7 +15,6 @@ const MODALITIES: Record<string, 'Cardinal' | 'Fixed' | 'Mutable'> = {
 };
 
 // House to Compass Bearings (Northern Hemisphere Standard)
-// South = MC (10), North = IC (4), East = Asc (1), West = Dsc (7)
 const N_HEMISPHERE_SECTORS: Record<number, [number, number]> = {
     10: [165, 195], // S
     11: [135, 165], // SE
@@ -31,7 +30,7 @@ const N_HEMISPHERE_SECTORS: Record<number, [number, number]> = {
     9: [195, 225], // SSW
 };
 
-// Southern Hemisphere: MC is North, IC is South.
+// Southern Hemisphere
 const S_HEMISPHERE_SECTORS: Record<number, [number, number]> = {
     10: [345, 15],  // N
     11: [15, 45],   // NNE
@@ -47,9 +46,74 @@ const S_HEMISPHERE_SECTORS: Record<number, [number, number]> = {
     9: [315, 345], // NNW
 };
 
+// --- Astronomical Math ---
+
+function toRad(deg: number): number { return deg * Math.PI / 180; }
+function toDeg(rad: number): number { return rad * 180 / Math.PI; }
+
 function normalize(deg: number): number {
     return ((deg % 360) + 360) % 360;
 }
+
+// Julian Day from JS Date
+function getJulianDay(date: Date): number {
+    return (date.getTime() / 86400000) - (date.getTimezoneOffset() / 1440) + 2440587.5;
+}
+
+// GMST calculation (Greenwich Mean Sidereal Time)
+function getGMST(date: Date): number {
+    const JD = getJulianDay(date);
+    const T = (JD - 2451545.0) / 36525.0;
+    // GMST in degrees at 0h UT logic... simplified approximation:
+    // IAU 1982 GMST
+    let st = 280.46061837 + 360.98564736629 * (JD - 2451545.0) + 0.000387933 * T * T - T * T * T / 38710000.0;
+    return normalize(st);
+}
+
+// Convert Ecliptic (Lon, Lat=0) to Equatorial (RA, Dec)
+function eclipticToEquatorial(lonDeg: number) {
+    const lonRad = toRad(lonDeg);
+    const epsilon = toRad(23.4393); // Obliquity of éclatric J2000
+
+    // sin(Dec) = sin(Lon) * sin(Eps)
+    const sinDec = Math.sin(lonRad) * Math.sin(epsilon);
+    const decRad = Math.asin(sinDec);
+
+    // tan(RA) = (sin(Lon) * cos(Eps)) / cos(Lon)
+    const y = Math.sin(lonRad) * Math.cos(epsilon);
+    const x = Math.cos(lonRad);
+    const raRad = Math.atan2(y, x);
+
+    return { ra: toDeg(raRad), dec: toDeg(decRad) };
+}
+
+// Compute Azimuth from RA/Dec, Lat, LST
+function computeAzimuth(ra: number, dec: number, lat: number, lng: number, date: Date): number {
+    const gmst = getGMST(date);
+    const lmst = normalize(gmst + lng); // Local Mean Sidereal Time
+    const ha = normalize(lmst - ra); // Hour Angle in degrees
+
+    // Convert to Rads
+    const haRad = toRad(ha);
+    const decRad = toRad(dec);
+    const latRad = toRad(lat);
+
+    // tan(Az) formula relative to South? Or North?
+    // Standard formula for Az measured from North clockwise:
+    // tan(Az) = sin(HA) / ( cos(HA)sin(Lat) - tan(Dec)cos(Lat) )
+
+    const y = Math.sin(haRad);
+    const x = Math.cos(haRad) * Math.sin(latRad) - Math.tan(decRad) * Math.cos(latRad);
+
+    // This gives Azimuth from SOUTH (S=0, W=90). We want from NORTH (N=0, E=90).
+    const azRad = Math.atan2(y, x);
+    let azDeg = toDeg(azRad);
+
+    // Add 180 to convert from South-zero to North-zero convention used in maps usually
+    return normalize(azDeg + 180);
+}
+
+// -------------------------
 
 function getRulerForHouse(houseId: number, chart: MinimalChart): string {
     const house = chart.houses.find(h => h.house === houseId);
@@ -70,50 +134,41 @@ function getPlanetSign(planetName: string, chart: MinimalChart): string {
 export function resolveHoraryDirection(
     targetHouseId: number,
     chart: MinimalChart,
-    latitude: number
-): ResolverOutput {
+    latitude: number,
+    longitude: number,
+    dateStr: string
+): ResolverOutput { // Now expects longitude and date string
+    const date = new Date(dateStr);
+
     // 1. Identify Rulers
     const querentRuler = getRulerForHouse(1, chart);
     const targetRuler = getRulerForHouse(targetHouseId, chart);
-    const moonSign = getPlanetSign('Moon', chart);
 
-    // 2. Get Degrees & Modalities
+    // 2. Logic for Standard House Sectors...
     const degA = getPlanetPos(querentRuler, chart);
     const degB = getPlanetPos(targetRuler, chart);
-    const targetSign = getPlanetSign(targetRuler, chart); // e.g., "Leo"
-    const targetModality = MODALITIES[targetSign] || 'Mutable'; // Default to medium
+    const targetSign = getPlanetSign(targetRuler, chart);
+    const targetModality = MODALITIES[targetSign] || 'Mutable';
 
-    // 3. Find House Position (Direction)
     const targetPlanet = chart.planets.find(p => p.name === targetRuler || p.id === targetRuler.toLowerCase());
     const targetLocationHouse = targetPlanet ? targetPlanet.house : targetHouseId;
 
-    // Hemisphere Logic
     const isNorth = latitude >= 0;
     const sectors = isNorth ? N_HEMISPHERE_SECTORS : S_HEMISPHERE_SECTORS;
-    const rawSector = sectors[targetLocationHouse] || [0, 30]; // Fallback
+    const rawSector = sectors[targetLocationHouse] || [0, 30];
 
     let start = rawSector[0];
     let end = rawSector[1];
-
-    // Handle crossover 0 logic (e.g. 345 to 15)
     let centerDeg = (start + end) / 2;
-    if (Math.abs(start - end) > 180) {
-        centerDeg = normalize((start + end + 360) / 2);
-    }
+    if (Math.abs(start - end) > 180) centerDeg = normalize((start + end + 360) / 2);
 
-    // 4. Calculate Distance Δ
+    // 3. Modality Distance ...
     let delta = Math.abs(degA - degB);
     if (delta > 180) delta = 360 - delta;
-    if (delta < 0.1) delta = 0.5; // Minimum
-
-    // Modality Scaling
-    // Fixed: Close (x0.5, x1, x5)
-    // Mutable: Medium (x1, x10, x20)
-    // Cardinal: Far (x5, x20, x100)
+    if (delta < 0.1) delta = 0.5;
 
     let scales = [1, 10, 100];
     let labels = ['Close', 'Medium', 'Far'];
-
     if (targetModality === 'Fixed') {
         scales = [0.5, 2, 10];
         labels = ['Very Close (Fixed)', 'Neighborhood (Fixed)', 'Town (Fixed)'];
@@ -121,7 +176,6 @@ export function resolveHoraryDirection(
         scales = [5, 50, 200];
         labels = ['Far (Cardinal)', 'Region (Cardinal)', 'Country (Cardinal)'];
     } else {
-        // Mutable
         scales = [1, 10, 50];
         labels = ['Nearby (Mutable)', 'City (Mutable)', 'State (Mutable)'];
     }
@@ -135,18 +189,30 @@ export function resolveHoraryDirection(
         };
     });
 
+    // 4. Calculate ACTUAL LOCAL AZIMUTH for TARGET PLANET
+    let actualAzimuth = undefined;
+    if (targetPlanet) {
+        const eq = eclipticToEquatorial(targetPlanet.abs_pos);
+        actualAzimuth = computeAzimuth(eq.ra, eq.dec, latitude, longitude, date);
+    }
+
+    // 5. Calculate Moon Azimuth
+    let moonAzimuth = undefined;
+    const moonPlanet = chart.planets.find(p => p.name === 'Moon');
+    if (moonPlanet) {
+        const eqMoon = eclipticToEquatorial(moonPlanet.abs_pos);
+        moonAzimuth = computeAzimuth(eqMoon.ra, eqMoon.dec, latitude, longitude, date);
+    }
+
     return {
-        sector: {
-            startDeg: start,
-            endDeg: end,
-            centerDeg
-        },
+        sector: { startDeg: start, endDeg: end, centerDeg },
         distanceHints: hints,
+        actualAzimuth,
+        moonAzimuth,
         analysis: {
             querentRuler,
             targetRuler,
             targetHouse: targetLocationHouse,
-            // Add Moon info for debug/UI if needed, but not in interface yet
         }
     };
 }
