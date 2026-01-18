@@ -41,7 +41,7 @@ body {
 
 /* Animated gradient background */
 .gradient-bg {
-  background: 
+  background:
     radial-gradient(ellipse at 20% 0%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 100%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
     radial-gradient(ellipse at 50% 50%, rgba(168, 85, 247, 0.05) 0%, transparent 70%),
@@ -60,8 +60,15 @@ body {
 
 /* Animation for loading states */
 @keyframes pulse-slow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .animate-pulse-slow {
@@ -69,6 +76,16 @@ body {
 }
 
 /* Form input focus animation */
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   outline: none;
+}
+
+/* Astro Font */
+@font-face {
+  font-family: 'AstroFont';
+  src: url('/fonts/StarFont.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
 }

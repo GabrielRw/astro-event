@@ -86,10 +86,24 @@ export function AstroLocatorPage() {
                 if (!response.ok) throw new Error('API Failed');
                 const data = await response.json();
 
+                // Helper for fallback absolute position
+                const SIGN_OFFSETS: Record<string, number> = {
+                    'Ari': 0, 'Tau': 30, 'Gem': 60, 'Can': 90,
+                    'Leo': 120, 'Vir': 150, 'Lib': 180, 'Sco': 210,
+                    'Sag': 240, 'Cap': 270, 'Aqu': 300, 'Pis': 330
+                };
+                const getAbs = (sign: string, pos: number) => (SIGN_OFFSETS[sign] ?? 0) + pos;
+
                 // Adapt API response to MinimalChart
                 const chart: MinimalChart = {
-                    planets: data.planets,
-                    houses: data.houses
+                    planets: (data.planets || []).map((p: any) => ({
+                        ...p,
+                        abs_pos: p.abs_pos ?? getAbs(p.sign, p.pos)
+                    })),
+                    houses: (data.houses || []).map((h: any) => ({
+                        ...h,
+                        abs_pos: h.abs_pos ?? getAbs(h.sign, h.pos)
+                    }))
                 };
 
                 // Resolve
