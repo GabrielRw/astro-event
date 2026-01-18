@@ -17,11 +17,13 @@ A modern astrology web app for calculating Western Natal Charts and visualizing 
 - Extra bodies: Chiron, Lilith, True Node
 
 ### 🗺️ Event Analyst (Map Overlay)
-- Visualize planetary positions as compass bearings
-- Interactive MapLibre map with OpenFreeMap tiles
-- Distance rings (decimal or degree-derived)
-- 8 pre-loaded historical events
-- Add custom events with geocoding
+- **Planetary Lines**: Visualize planetary positions as compass bearings
+- **Interactive Map**: MapLibre map with OpenFreeMap tiles
+- **Advanced Rings**: Distance rings (decimal, degree-derived, or IC-based)
+- **Intersection Analysis**: Visualize intersection points with automatic street name lookup
+- **Smart Geocoding**: Hover address lookup and precise location search
+- **Customizable**: Toggle between Metric (km) and Imperial (miles) units
+- **Event Management**: 8 pre-loaded historical events + custom event creation
 
 ---
 
