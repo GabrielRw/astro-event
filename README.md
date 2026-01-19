@@ -25,6 +25,11 @@ A modern astrology web app for calculating Western Natal Charts and visualizing 
 - **Customizable**: Toggle between Metric (km) and Imperial (miles) units
 - **Event Management**: 8 pre-loaded historical events + custom event creation
 
+### 🌐 Geo Chart (Experimental)
+- **Geodesic Projection**: Visualise planets and house sectors projected onto the Earth.
+- **Interactive Grid**: Explore astrological influences across the globe with geodesic shapes.
+- *Note: This feature is currently hidden from the main menu.*
+
 ---
 
 ## Quick Start

@@ -71,8 +71,8 @@ export default function HomePage() {
             </div>
           </Link>
 
-          {/* Geo Chart Card - NEW */}
-          <Link
+          {/* Geo Chart Card - NEW (Hidden/Experimental) */}
+          {/* <Link
             href="/geo-chart"
             className="group relative p-8 rounded-3xl bg-[#0B0C10]/80 border border-white/10 hover:border-blue-500/50 backdrop-blur-xl transition-all duration-300 hover:shadow-2xl hover:shadow-blue-500/20 flex flex-col items-center text-center space-y-6 overflow-hidden"
           >
@@ -98,7 +98,7 @@ export default function HomePage() {
                 Open Cartography <ArrowRight className="w-4 h-4" />
               </span>
             </div>
-          </Link>
+          </Link> */}
         </div>
       </div>
     </div>
