@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { MapLibreMap } from '@/src/components/MapLibreMap';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { ChartPanel } from './ChartPanel';
 import { EventList } from './EventList';
 import { EventModal } from './EventModal';
@@ -252,6 +254,9 @@ export function EventAnalystPage() {
             {/* Header */}
             <header className="px-6 py-4 border-b border-white/5 bg-[#0B0C10]/80 backdrop-blur-xl flex items-center justify-between sticky top-0 z-20">
                 <div className="flex items-center gap-4">
+                    <Link href="/" className="p-2 -ml-2 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
+                        <ArrowLeft className="w-5 h-5" />
+                    </Link>
                     <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-400 to-green-500 bg-clip-text text-transparent">Event Analyst</h1>
                 </div>
                 <div className="flex items-center gap-3">
