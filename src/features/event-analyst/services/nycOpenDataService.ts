@@ -1,7 +1,7 @@
 import { EventItem } from '../eventTypes';
 import { PaginatedResult } from './types';
 
-const BASE_URL = 'https://data.cityofnewyork.us/resource/uip8-fykc.json';
+const NYC_BASE_URL = 'https://data.cityofnewyork.us/resource/uip8-fykc.json';
 
 export async function fetchNYCEvents(
     startDate: Date,
@@ -10,44 +10,40 @@ export async function fetchNYCEvents(
     limit: number
 ): Promise<PaginatedResult<EventItem>> {
 
-    // Socrata Query (SoQL)
-    // $where=arrest_date between '...' and '...'
-    // $limit=...
-    // $offset=...
-    // $order=arrest_date DESC
-
-    const startStr = startDate.toISOString().slice(0, 10); // YYYY-MM-DD
-    const endStr = endDate.toISOString().slice(0, 10);
     const offset = (page - 1) * limit;
 
+    // Fetch most recent arrests, sorted by date descending
+    // Not filtering by date range to ensure we always get data
     const query = new URLSearchParams({
-        '$where': `arrest_date between '${startStr}' and '${endStr}'`,
         '$limit': limit.toString(),
         '$offset': offset.toString(),
-        '$order': 'arrest_date DESC'
+        '$order': 'arrest_date DESC',
+        '$where': 'latitude IS NOT NULL AND longitude IS NOT NULL' // Only get geocoded records
     });
 
     try {
-        const res = await fetch(`${BASE_URL}?${query.toString()}`);
+        const res = await fetch(`${NYC_BASE_URL}?${query.toString()}`);
         if (!res.ok) throw new Error(`NYC API Error: ${res.status}`);
 
         const data = await res.json();
 
-        const events: EventItem[] = data.map((record: any) => ({
-            id: `nyc-${record.arrest_key}`,
-            title: `${record.pd_desc || 'Arrest'} (${record.ofns_desc || 'Unknown'})`,
-            datetimeISO: `${record.arrest_date.split('T')[0]}T12:00:00Z`, // Fix: remove existing time part if any
-            timeType: 'reported',
-            timeConfidence: 'exact', // Date is exact
-            location: {
-                label: `Precinct ${record.arrest_precinct}, NYC`,
-                lat: parseFloat(record.latitude),
-                lng: parseFloat(record.longitude),
-                precision: 'coordinates'
-            },
-            dataSource: 'us-city',
-            notes: `Law Code: ${record.law_code}`
-        }));
+        const events: EventItem[] = data
+            .filter((record: any) => record.latitude && record.longitude)
+            .map((record: any) => ({
+                id: `nyc-${record.arrest_key}`,
+                title: `${record.pd_desc || 'Arrest'} - ${record.ofns_desc || 'Unknown Offense'}`,
+                datetimeISO: record.arrest_date,
+                timeType: 'occurred',
+                timeConfidence: 'exact',
+                location: {
+                    label: `Precinct ${record.arrest_precinct}, ${record.arrest_boro === 'M' ? 'Manhattan' : record.arrest_boro === 'B' ? 'Bronx' : record.arrest_boro === 'K' ? 'Brooklyn' : record.arrest_boro === 'Q' ? 'Queens' : 'Staten Island'}, NYC`,
+                    lat: parseFloat(record.latitude),
+                    lng: parseFloat(record.longitude),
+                    precision: 'coordinates'
+                },
+                dataSource: 'us-city',
+                notes: `${record.law_cat_cd === 'F' ? 'Felony' : 'Misdemeanor'} - ${record.law_code}`
+            }));
 
         return {
             data: events,
@@ -59,3 +55,4 @@ export async function fetchNYCEvents(
         return { data: [], hasMore: false };
     }
 }
+

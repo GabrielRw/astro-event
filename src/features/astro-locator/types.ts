@@ -31,6 +31,7 @@ export interface ResolverOutput {
     distanceHints: {
         km: number;
         miles: number;
+        meters: number;
         label: string;
     }[];
     analysis: {
@@ -42,6 +43,32 @@ export interface ResolverOutput {
     moonAzimuth?: number;
     debug?: any;
 }
+
+// Distance Settings
+export type DistanceMode = 'auto' | 'manual' | 'aspect' | 'ic';
+
+export interface DistanceSettings {
+    mode: DistanceMode;
+    // Manual mode: user-defined distances in km
+    manualDistances: [number, number, number];
+    // Aspect/IC mode multiplier (uses angular separation * multiplier)
+    aspectMultiplier: number;
+    unit: 'miles' | 'km' | 'meters';
+}
+
+export const DEFAULT_DISTANCE_SETTINGS: DistanceSettings = {
+    mode: 'auto',
+    manualDistances: [1, 10, 50],
+    aspectMultiplier: 1,
+    unit: 'km',
+};
+
+// Modality presets for reference
+export const MODALITY_PRESETS = {
+    fixed: { scales: [0.5, 2, 10], labels: ['Very Close (Fixed)', 'Neighborhood (Fixed)', 'Town (Fixed)'] },
+    cardinal: { scales: [5, 50, 200], labels: ['Far (Cardinal)', 'Region (Cardinal)', 'Country (Cardinal)'] },
+    mutable: { scales: [1, 10, 50], labels: ['Nearby (Mutable)', 'City (Mutable)', 'State (Mutable)'] },
+};
 
 // Chart Data Types (Subset of what API returns)
 export interface ChartPlanet {

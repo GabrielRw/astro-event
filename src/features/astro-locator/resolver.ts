@@ -1,17 +1,19 @@
-import { ResolverOutput, MinimalChart } from './types';
+import { ResolverOutput, MinimalChart, DistanceSettings } from './types';
 
 // Traditional Rulerships (Horary Standard)
+// Uses abbreviated sign names as returned by the API (Ari, Tau, Gem, etc.)
 const RULERS: Record<string, string> = {
-    'Aries': 'Mars', 'Taurus': 'Venus', 'Gemini': 'Mercury', 'Cancer': 'Moon',
-    'Leo': 'Sun', 'Virgo': 'Mercury', 'Libra': 'Venus', 'Scorpio': 'Mars',
-    'Sagittarius': 'Jupiter', 'Capricorn': 'Saturn', 'Aquarius': 'Saturn', 'Pisces': 'Jupiter'
+    'Ari': 'Mars', 'Tau': 'Venus', 'Gem': 'Mercury', 'Can': 'Moon',
+    'Leo': 'Sun', 'Vir': 'Mercury', 'Lib': 'Venus', 'Sco': 'Mars',
+    'Sag': 'Jupiter', 'Cap': 'Saturn', 'Aqu': 'Saturn', 'Pis': 'Jupiter'
 };
 
 // Sign Modalities
+// Uses abbreviated sign names as returned by the API
 const MODALITIES: Record<string, 'Cardinal' | 'Fixed' | 'Mutable'> = {
-    'Aries': 'Cardinal', 'Cancer': 'Cardinal', 'Libra': 'Cardinal', 'Capricorn': 'Cardinal',
-    'Taurus': 'Fixed', 'Leo': 'Fixed', 'Scorpio': 'Fixed', 'Aquarius': 'Fixed',
-    'Gemini': 'Mutable', 'Virgo': 'Mutable', 'Sagittarius': 'Mutable', 'Pisces': 'Mutable'
+    'Ari': 'Cardinal', 'Can': 'Cardinal', 'Lib': 'Cardinal', 'Cap': 'Cardinal',
+    'Tau': 'Fixed', 'Leo': 'Fixed', 'Sco': 'Fixed', 'Aqu': 'Fixed',
+    'Gem': 'Mutable', 'Vir': 'Mutable', 'Sag': 'Mutable', 'Pis': 'Mutable'
 };
 
 // House to Compass Bearings (Northern Hemisphere Standard)
@@ -128,7 +130,7 @@ function getPlanetPos(planetName: string, chart: MinimalChart): number {
 
 function getPlanetSign(planetName: string, chart: MinimalChart): string {
     const p = chart.planets.find(p => p.name === planetName || p.id === planetName.toLowerCase());
-    return p ? p.sign : 'Aries';
+    return p ? p.sign : 'Ari';
 }
 
 export function resolveHoraryDirection(
@@ -136,8 +138,9 @@ export function resolveHoraryDirection(
     chart: MinimalChart,
     latitude: number,
     longitude: number,
-    dateStr: string
-): ResolverOutput { // Now expects longitude and date string
+    dateStr: string,
+    distanceSettings?: DistanceSettings
+): ResolverOutput {
     const date = new Date(dateStr);
 
     // 1. Identify Rulers
@@ -162,32 +165,80 @@ export function resolveHoraryDirection(
     let centerDeg = (start + end) / 2;
     if (Math.abs(start - end) > 180) centerDeg = normalize((start + end + 360) / 2);
 
-    // 3. Modality Distance ...
+    // 3. Distance Calculation based on settings
     let delta = Math.abs(degA - degB);
     if (delta > 180) delta = 360 - delta;
     if (delta < 0.1) delta = 0.5;
 
-    let scales = [1, 10, 100];
-    let labels = ['Close', 'Medium', 'Far'];
-    if (targetModality === 'Fixed') {
-        scales = [0.5, 2, 10];
-        labels = ['Very Close (Fixed)', 'Neighborhood (Fixed)', 'Town (Fixed)'];
-    } else if (targetModality === 'Cardinal') {
-        scales = [5, 50, 200];
-        labels = ['Far (Cardinal)', 'Region (Cardinal)', 'Country (Cardinal)'];
-    } else {
-        scales = [1, 10, 50];
-        labels = ['Nearby (Mutable)', 'City (Mutable)', 'State (Mutable)'];
+    let hints: { km: number; miles: number; meters: number; label: string }[];
+    const mode = distanceSettings?.mode || 'auto';
+    const unit = distanceSettings?.unit || 'km';
+
+    function createHint(km: number, labelSuffix: string, labelPrefix: string = ''): { km: number; miles: number; meters: number; label: string } {
+        const miles = Math.round(km * 0.621371 * 10) / 10;
+        const meters = Math.round(km * 1000);
+        let distLabel = `${Math.round(km * 10) / 10} km`;
+
+        if (unit === 'miles') distLabel = `${miles} mi`;
+        if (unit === 'meters') distLabel = `${Math.round(meters)} m`;
+
+        return {
+            km,
+            miles,
+            meters,
+            label: `${labelPrefix} ${distLabel} ${labelSuffix}`.trim()
+        };
     }
 
-    const hints = scales.map((scale, i) => {
-        const dist = delta * scale;
-        return {
-            km: Math.round(dist * 10) / 10,
-            miles: Math.round(dist * 0.621371 * 10) / 10,
-            label: `${labels[i]} (Δ ${delta.toFixed(1)}°)`
-        };
-    });
+    if (mode === 'manual' && distanceSettings) {
+        // Manual mode: user-defined distances directly
+        const manualDists = distanceSettings.manualDistances;
+        hints = manualDists.map((d, i) =>
+            createHint(d, `(Band ${i + 1})`)
+        );
+    } else if (mode === 'aspect' && distanceSettings) {
+        // Aspect mode: angular separation between rulers * multiplier
+        const mult = distanceSettings.aspectMultiplier;
+        const bases = [1, 5, 10];
+        hints = bases.map(baseMult => {
+            const m = mult * baseMult;
+            const km = delta * m;
+            return createHint(km, `(Δ ${delta.toFixed(1)}° × ${m.toFixed(1)})`);
+        });
+    } else if (mode === 'ic' && distanceSettings) {
+        // IC mode: distance from target planet to IC (4th house cusp)
+        const ic = chart.houses.find(h => h.house === 4);
+        const icPos = ic?.abs_pos ?? 0;
+        let icDelta = Math.abs(degB - icPos);
+        if (icDelta > 180) icDelta = 360 - icDelta;
+        if (icDelta < 0.1) icDelta = 0.5;
+
+        const mult = distanceSettings.aspectMultiplier;
+        const baseKm = icDelta * mult;
+
+        const scales = [0.1, 1, 10, 100];
+        hints = scales.map(scale => {
+            return createHint(baseKm * scale, `(IC ${icDelta.toFixed(0)}° × ${scale})`);
+        });
+    } else {
+        // Auto mode: use modality-based scales
+        let scales = [1, 10, 100];
+        let labels = ['Close', 'Medium', 'Far'];
+        if (targetModality === 'Fixed') {
+            scales = [0.5, 2, 10];
+            labels = ['Very Close (Fixed)', 'Neighborhood (Fixed)', 'Town (Fixed)'];
+        } else if (targetModality === 'Cardinal') {
+            scales = [5, 50, 200];
+            labels = ['Far (Cardinal)', 'Region (Cardinal)', 'Country (Cardinal)'];
+        } else {
+            scales = [1, 10, 50];
+            labels = ['Nearby (Mutable)', 'City (Mutable)', 'State (Mutable)'];
+        }
+        hints = scales.map((scale, i) => {
+            const distKm = delta * scale;
+            return createHint(distKm, `(Δ ${delta.toFixed(1)}°)`, labels[i]);
+        });
+    }
 
     // 4. Calculate ACTUAL LOCAL AZIMUTH for TARGET PLANET
     let actualAzimuth = undefined;

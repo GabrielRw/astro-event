@@ -99,46 +99,39 @@ export function EventList({
                     <div className="mb-4 space-y-2 animate-in slide-in-from-top-2 duration-200">
                         <p className="text-[10px] uppercase tracking-wider text-white/30 font-semibold mb-2">Data Sources</p>
                         <div className="flex flex-wrap gap-2">
-                            {[
-                                { id: 'historical', label: 'Historical' },
-                                { id: 'uk-police', label: 'UK Police' },
-                                { id: 'us-city', label: 'US City' }
-                            ].map(source => (
-                                <button
-                                    key={source.id}
-                                    onClick={() => toggleFilter(source.id)}
-                                    className={`
-                                        px-3 py-1.5 rounded-lg text-xs font-medium border transition-all
-                                        ${activeFilters.includes(source.id)
-                                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                                            : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
-                                        }
-                                    `}
-                                >
-                                    {source.label}
-                                </button>
-                            ))}
+                            <button
+                                onClick={() => toggleFilter('us-city')}
+                                className={`
+                                    px-3 py-1.5 rounded-lg text-xs font-medium border transition-all
+                                    ${activeFilters.includes('us-city')
+                                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                                        : 'bg-white/5 border-white/5 text-white/40 hover:bg-white/10'
+                                    }
+                                `}
+                            >
+                                US City (NYC)
+                            </button>
                         </div>
 
                         <div className="pt-2 border-t border-white/5 mt-2">
-                            <p className="text-[10px] uppercase tracking-wider text-white/30 font-semibold mb-2">Date Range</p>
+                            <p className="text-[10px] uppercase tracking-wider text-white/30 font-semibold mb-2">Time Range</p>
                             <div className="flex gap-2">
                                 <div className="flex-1">
                                     <label className="text-[10px] text-white/40 block mb-1">From</label>
                                     <input
-                                        type="date"
+                                        type="datetime-local"
                                         value={dateRange.start}
                                         onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value })}
-                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500/50"
+                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500/50 color-scheme-dark"
                                     />
                                 </div>
                                 <div className="flex-1">
                                     <label className="text-[10px] text-white/40 block mb-1">To</label>
                                     <input
-                                        type="date"
+                                        type="datetime-local"
                                         value={dateRange.end}
                                         onChange={(e) => onDateRangeChange({ ...dateRange, end: e.target.value })}
-                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500/50"
+                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500/50 color-scheme-dark"
                                     />
                                 </div>
                             </div>

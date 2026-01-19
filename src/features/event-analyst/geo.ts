@@ -231,3 +231,21 @@ export function computeDegreeDerivedRings(
     // Return all rings regardless of maxDistanceMiles, as the line must touch the largest one
     return multipliers.map(m => m * referenceDegree);
 }
+
+/**
+ * Compute IC-derived ring values based on IC (4th house cusp) degree
+ * Uses powers of 10: ×0.1, ×1, ×10, ×100
+ * Example: IC = 17° → rings at 1.7, 17, 170, 1700 miles
+ */
+export function computeICRings(
+    icDegree: number,
+    maxDistanceMiles: number
+): number[] {
+    if (icDegree <= 0) {
+        return computeDecimalRings(maxDistanceMiles);
+    }
+
+    const multipliers = [0.1, 1, 10, 100];
+    return multipliers.map(m => m * icDegree);
+}
+

@@ -56,10 +56,10 @@ export interface ChartBody {
 }
 
 // Ring calculation mode
-export type RingMode = 'decimal' | 'degreeDerived';
+export type RingMode = 'decimal' | 'degreeDerived' | 'ic';
 
 // Distance unit
-export type DistanceUnit = 'miles' | 'km';
+export type DistanceUnit = 'miles' | 'km' | 'meters';
 
 // Overlay display settings
 export interface OverlaySettings {

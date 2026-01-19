@@ -1,7 +1,7 @@
 import { FetchEventsParams, PaginatedResult } from './types';
 import { EventItem } from '../eventTypes';
-import { fetchUKPoliceEvents } from './ukPoliceService';
 import { fetchNYCEvents } from './nycOpenDataService';
+import { fetchChicagoEvents } from './chicagoDataService';
 
 export async function fetchEvents({
     startDate,
@@ -13,22 +13,17 @@ export async function fetchEvents({
 
     const promises: Promise<PaginatedResult<EventItem>>[] = [];
 
-    // Distribute limit across sources? 
-    // Simplify: Fetch full limit from EACH source, then combine and sort.
-    // This effectively means page size could be limit * numSources at max.
-    // This is better for ensuring we don't return sparse pages.
-
-    if (sources.includes('uk-police')) {
-        promises.push(fetchUKPoliceEvents(startDate, endDate, page, limit));
-    }
-
+    // Fetch from both NYC and Chicago for US city data
     if (sources.includes('us-city')) {
-        promises.push(fetchNYCEvents(startDate, endDate, page, limit));
+        // Split limit between cities
+        const perCityLimit = Math.ceil(limit / 2);
+        promises.push(fetchNYCEvents(startDate, endDate, page, perCityLimit));
+        promises.push(fetchChicagoEvents(startDate, endDate, page, perCityLimit));
     }
 
     const results = await Promise.all(promises);
 
-    // Combine
+    // Combine all events
     const allEvents = results.flatMap(r => r.data);
     const hasMore = results.some(r => r.hasMore);
 
@@ -42,3 +37,4 @@ export async function fetchEvents({
         hasMore
     };
 }
+

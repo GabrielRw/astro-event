@@ -198,10 +198,14 @@ export function AstroLocatorMap({ center, resolverOutput }: AstroLocatorMapProps
 
         const centerPt = [center.lng, center.lat];
         const { startDeg, endDeg } = resolverOutput.sector;
-        const radiusKm = 5000;
+
+        // Sector wedge radius (smaller for visual clarity)
+        const sectorRadiusKm = 5000;
+        // Line radius (extended to ~half Earth's circumference for "infinite" look)
+        const lineRadiusKm = 20000;
 
         // Create Wedge
-        const wedge = turf.sector(centerPt, radiusKm, startDeg, endDeg, { units: 'kilometers' });
+        const wedge = turf.sector(centerPt, sectorRadiusKm, startDeg, endDeg, { units: 'kilometers' });
 
         sectorSource?.setData({
             type: 'FeatureCollection',
@@ -218,18 +222,18 @@ export function AstroLocatorMap({ center, resolverOutput }: AstroLocatorMapProps
             features: rings
         });
 
-        // Azimuth Line
+        // Azimuth Line (Target Planet Direction) - extends indefinitely
         if (resolverOutput.actualAzimuth !== undefined) {
-            const dest = turf.destination(centerPt, radiusKm, resolverOutput.actualAzimuth, { units: 'kilometers' });
+            const dest = turf.destination(centerPt, lineRadiusKm, resolverOutput.actualAzimuth, { units: 'kilometers' });
             const line = turf.lineString([centerPt, dest.geometry.coordinates], { label: 'Target' });
             azimuthSource?.setData({ type: 'FeatureCollection', features: [line] });
         } else {
             azimuthSource?.setData({ type: 'FeatureCollection', features: [] });
         }
 
-        // Moon Line
+        // Moon Line - extends indefinitely
         if (resolverOutput.moonAzimuth !== undefined) {
-            const dest = turf.destination(centerPt, radiusKm, resolverOutput.moonAzimuth, { units: 'kilometers' });
+            const dest = turf.destination(centerPt, lineRadiusKm, resolverOutput.moonAzimuth, { units: 'kilometers' });
             const line = turf.lineString([centerPt, dest.geometry.coordinates], { label: 'Moon' });
             moonSource?.setData({ type: 'FeatureCollection', features: [line] });
         } else {

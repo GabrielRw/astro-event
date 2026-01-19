@@ -7,7 +7,7 @@ import { AstroLocatorMap } from './AstroLocatorMap';
 import { AstroLocatorPanel } from './AstroLocatorPanel';
 import { LocationModal } from './LocationModal';
 import { resolveHoraryDirection } from './resolver';
-import { ResolverOutput, MinimalChart } from './types';
+import { ResolverOutput, MinimalChart, DistanceSettings, DEFAULT_DISTANCE_SETTINGS } from './types';
 import { mapConfig } from '@/src/config/mapConfig';
 
 export function AstroLocatorPage() {
@@ -24,6 +24,7 @@ export function AstroLocatorPage() {
     const [statusMsg, setStatusMsg] = useState('Waiting for location...');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+    const [distanceSettings, setDistanceSettings] = useState<DistanceSettings>(DEFAULT_DISTANCE_SETTINGS);
 
     // 1. Get Geolocation on Mount
     useEffect(() => {
@@ -107,7 +108,7 @@ export function AstroLocatorPage() {
                 };
 
                 // Resolve
-                const production = resolveHoraryDirection(selectedHouseId, chart, userLocation.lat, userLocation.lng, date);
+                const production = resolveHoraryDirection(selectedHouseId, chart, userLocation.lat, userLocation.lng, date, distanceSettings);
                 setResolverOutput(production);
                 setStatusMsg('Analysis complete.');
 
@@ -120,7 +121,7 @@ export function AstroLocatorPage() {
         };
 
         analyze();
-    }, [selectedHouseId, userLocation, date]);
+    }, [selectedHouseId, userLocation, date, distanceSettings]);
 
     return (
         <div className="h-screen w-full overflow-hidden gradient-bg flex flex-col">
@@ -171,6 +172,8 @@ export function AstroLocatorPage() {
                         onSelectHouse={setSelectedHouseId}
                         date={date}
                         onDateChange={setDate}
+                        distanceSettings={distanceSettings}
+                        onDistanceSettingsChange={setDistanceSettings}
                     />
                 </div>
 

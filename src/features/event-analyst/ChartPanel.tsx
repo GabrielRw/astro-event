@@ -98,6 +98,7 @@ export function ChartPanel({ bodies, settings, onSettingsChange, onBodySelect }:
                         >
                             <option value="decimal" className="bg-[#0B0C10]">Decimal</option>
                             <option value="degreeDerived" className="bg-[#0B0C10]">Degree-Derived</option>
+                            <option value="ic" className="bg-[#0B0C10]">IC (4th House)</option>
                         </select>
                     </div>
                     <div className="w-1/3">
@@ -109,12 +110,18 @@ export function ChartPanel({ bodies, settings, onSettingsChange, onBodySelect }:
                         >
                             <option value="miles" className="bg-[#0B0C10]">Mi</option>
                             <option value="km" className="bg-[#0B0C10]">Km</option>
+                            <option value="meters" className="bg-[#0B0C10]">Meter</option>
                         </select>
                     </div>
                 </div>
                 {settings.ringMode === 'degreeDerived' && (
                     <p className="text-[10px] text-white/30 mt-1.5 font-light">
-                        Rings: 0.1x, 1x, 10x, 100x of Degree
+                        Rings: 0.1×, 1×, 10×, 100× of selected body degree
+                    </p>
+                )}
+                {settings.ringMode === 'ic' && (
+                    <p className="text-[10px] text-white/30 mt-1.5 font-light">
+                        Rings: 0.1×, 1×, 10×, 100× of IC degree (e.g. IC=17° → 1.7, 17, 170, 1700)
                     </p>
                 )}
 

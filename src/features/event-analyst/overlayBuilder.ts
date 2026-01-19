@@ -4,8 +4,8 @@
  * Converts chart data + settings into GeoJSON features for map display
  */
 
-import type { ChartBody, OverlaySettings, RayFeature, RingFeature, IntersectionFeature, OverlayGeoJSON, DistanceUnit } from './eventTypes';
-import { generateRayLine, generateCirclePolygon, milesToMeters, destinationPoint, milesToKm, computeDecimalRings, computeDegreeDerivedRings } from './geo';
+import type { ChartBody, OverlaySettings, RayFeature, RingFeature, IntersectionFeature, OverlayGeoJSON, DistanceUnit, RingMode } from './eventTypes';
+import { generateRayLine, generateCirclePolygon, milesToMeters, destinationPoint, milesToKm, computeDecimalRings, computeDegreeDerivedRings, computeICRings } from './geo';
 
 /**
  * Build ray features from chart bodies
@@ -63,7 +63,12 @@ export function buildRingFeatures(
         const coordinates = generateCirclePolygon(centerLat, centerLng, radiusMeters, 128);
 
         // Convert radius for display based on unit
-        const displayRadius = unit === 'km' ? milesToKm(radiusMiles) : radiusMiles;
+        let displayRadius = radiusMiles;
+        if (unit === 'km') {
+            displayRadius = milesToKm(radiusMiles);
+        } else if (unit === 'meters') {
+            displayRadius = milesToMeters(radiusMiles);
+        }
 
         return {
             type: 'Feature' as const,
@@ -114,7 +119,12 @@ export function buildIntersectionFeatures(
             const point = destinationPoint(centerLat, centerLng, body.bearingDeg, radiusMeters);
 
             // Display values
-            const displayRadius = unit === 'km' ? milesToKm(radiusMiles) : radiusMiles;
+            let displayRadius = radiusMiles;
+            if (unit === 'km') {
+                displayRadius = milesToKm(radiusMiles);
+            } else if (unit === 'meters') {
+                displayRadius = milesToMeters(radiusMiles);
+            }
 
             intersections.push({
                 type: 'Feature' as const,
@@ -156,10 +166,14 @@ function formatRingLabel(value: number, unit: DistanceUnit): string {
  * Compute ring values based on mode
  */
 export function computeRingValues(
-    mode: 'decimal' | 'degreeDerived',
+    mode: RingMode,
     maxDistanceMiles: number,
-    referenceDegree?: number
+    referenceDegree?: number,
+    icDegree?: number
 ): number[] {
+    if (mode === 'ic' && icDegree !== undefined && icDegree > 0) {
+        return computeICRings(icDegree, maxDistanceMiles);
+    }
     if (mode === 'degreeDerived' && referenceDegree !== undefined && referenceDegree > 0) {
         return computeDegreeDerivedRings(referenceDegree, maxDistanceMiles);
     }
@@ -175,9 +189,9 @@ export function buildOverlayGeoJSON(
     bodies: ChartBody[],
     settings: OverlaySettings
 ): OverlayGeoJSON {
-    // Determine ray distance: in degreeDerived mode, rays must touch the ends of the circumference (the largest ring)
+    // Determine ray distance: rays must touch the largest ring
     let rayDistance = settings.maxDistanceMiles;
-    if (settings.ringMode === 'degreeDerived' && settings.ringValuesMiles.length > 0) {
+    if ((settings.ringMode === 'degreeDerived' || settings.ringMode === 'ic') && settings.ringValuesMiles.length > 0) {
         rayDistance = Math.max(...settings.ringValuesMiles);
     }
 

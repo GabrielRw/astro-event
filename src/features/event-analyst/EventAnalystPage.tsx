@@ -5,7 +5,6 @@ import { MapLibreMap } from '@/src/components/MapLibreMap';
 import { ChartPanel } from './ChartPanel';
 import { EventList } from './EventList';
 import { EventModal } from './EventModal';
-import { sampleEvents } from './sampleEvents';
 import { buildOverlayGeoJSON, computeRingValues } from './overlayBuilder';
 import { signToBearing, parseSign } from './bearing';
 import { mapConfig } from '@/src/config/mapConfig';
@@ -16,10 +15,15 @@ export function EventAnalystPage() {
     // Search & Filter State
     const [events, setEvents] = useState<EventItem[]>([]);
     const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
-    const [activeFilters, setActiveFilters] = useState<string[]>(['us-city', 'uk-police']);
-    const [dateRange, setDateRange] = useState<{ start: string; end: string }>({
-        start: '2023-01-01',
-        end: new Date().toISOString().slice(0, 10)
+    const [activeFilters, setActiveFilters] = useState<string[]>(['us-city']);
+    // Default to last 30 days to ensure data availability
+    const [dateRange, setDateRange] = useState<{ start: string; end: string }>(() => {
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        return {
+            start: thirtyDaysAgo.toISOString().slice(0, 10),
+            end: now.toISOString().slice(0, 10)
+        };
     });
 
     // Pagination State
@@ -46,40 +50,25 @@ export function EventAnalystPage() {
     }, [activeFilters, dateRange]);
 
     const loadEvents = async (pageNum: number, reset: boolean = false) => {
-        if (!activeFilters.includes('uk-police') && !activeFilters.includes('us-city') && !activeFilters.includes('historical')) {
+        if (!activeFilters.includes('us-city')) {
             setEvents(reset ? [] : prev => prev);
             return;
         }
 
         setIsLoading(true);
         try {
-            // Import dynamically to avoid SSR issues if any, though here it's client comp
             const { fetchEvents } = await import('./services/eventService');
 
-            // If historical is active, include sample events? 
-            let newEvents: EventItem[] = [];
+            const result = await fetchEvents({
+                startDate: new Date(dateRange.start),
+                endDate: new Date(dateRange.end),
+                page: pageNum,
+                limit: 100, // Fetch more events for better coverage
+                sources: ['us-city']
+            });
 
-            if (activeFilters.includes('historical') && pageNum === 1) {
-                newEvents = [...sampleEvents];
-            }
-
-            // Fetch Real Data
-            const realSources = activeFilters.filter(f => f !== 'historical');
-            if (realSources.length > 0) {
-                const result = await fetchEvents({
-                    startDate: new Date(dateRange.start),
-                    endDate: new Date(dateRange.end),
-                    page: pageNum,
-                    limit: 50,
-                    sources: realSources
-                });
-                newEvents = [...newEvents, ...result.data];
-                setHasMore(result.hasMore);
-            } else {
-                setHasMore(false);
-            }
-
-            setEvents(prev => reset ? newEvents : [...prev, ...newEvents]);
+            setEvents(prev => reset ? result.data : [...prev, ...result.data]);
+            setHasMore(result.hasMore);
         } catch (err) {
             console.error('Failed to load events', err);
             setError('Failed to load events. Please try again.');
@@ -198,20 +187,25 @@ export function EventAnalystPage() {
     // Update ring values when mode, distance, or selected body changes
     useEffect(() => {
         let referenceDeg: number | undefined;
+        let icDeg: number | undefined;
+
+        // Get IC degree for IC mode
+        const icBody = chartBodies.find(b => b.id === 'ic' || b.id === 'house_4');
+        icDeg = icBody?.deg;
 
         if (overlaySettings.selectedBodyId) {
             const selectedBody = chartBodies.find(b => b.id === overlaySettings.selectedBodyId);
             referenceDeg = selectedBody?.deg;
         } else {
             // Default to IC if nothing selected
-            const icBody = chartBodies.find(b => b.id === 'ic' || b.id === 'house_4');
-            referenceDeg = icBody?.deg;
+            referenceDeg = icDeg;
         }
 
         const ringValues = computeRingValues(
             overlaySettings.ringMode,
             overlaySettings.maxDistanceMiles,
-            referenceDeg
+            referenceDeg,
+            icDeg
         );
 
         setOverlaySettings(prev => ({
